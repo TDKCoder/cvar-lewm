@@ -1,0 +1,94 @@
+\documentclass{article}
+
+% Numeric, compressed citations to save space
+\PassOptionsToPackage{numbers,compress}{natbib}
+\usepackage[preprint]{neurips_2025}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+
+% Course footer in place of the default "Preprint. Under review." notice
+\makeatletter
+\renewcommand{\@noticestring}{Project proposal for ECE 285: Deep Generative Models (Fall 2026), UC San Diego.}
+\makeatother
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\cvar}{\mathrm{CVaR}}
+
+\title{CVaR-LeWM: Flow-Matching Latent Dynamics and\\Risk-Sensitive Planning under Stochastic Dynamics}
+
+\author{%
+  Rohan Nambimadom\\
+  Department of Electrical and Computer Engineering\\
+  University of California, San Diego\\
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Joint-embedding predictive world models such as LeWorldModel (LeWM) plan with the cross-entropy method (CEM) in latent space, but their predictors are deterministic and regress to the conditional mean of the next embedding. Under stochastic dynamics that mean may match no real outcome, so the planner favors plans that work on average and fail in the tails. We propose CVaR-LeWM: keep LeWM's frozen encoder, swap its predictor for a conditional flow-matching head that samples future latents, and score CEM candidates by the conditional value-at-risk (CVaR) of their sampled goal costs. We test it on PushT and TwoRoom with injected dynamics noise and check predicted spread against the simulator's.
+\end{abstract}
+
+\section{Problem and motivation}
+
+\paragraph{Problem.} Does a stochastic latent predictor improve JEPA planning when the \emph{dynamics} are stochastic, and does it help more when the planner optimizes tail cost rather than mean cost? LeWM~\cite{maes2026lewm} trains a 15M-parameter encoder and predictor end to end from pixels with a next-embedding loss and SIGReg~\cite{balestriero2025lejepa}, and plans about $48\times$ faster than DINO-WM~\cite{zhou2025dinowm}. The predictor $f_\theta(z_t,a_t)$ minimizes $\E\|f_\theta(z_t,a_t)-z_{t+1}\|^2$, whose optimum is $\E[z_{t+1}\mid z_t,a_t]$: if a push sends the block left or right with similar probability, the prediction sits between the two outcomes. \textbf{Why it matters:} real contact is stochastic, and a mean-based planner cannot tell a plan that always succeeds from one that fails badly half the time. Model-based RL handles this with probabilistic ensembles~\cite{chua2018pets} and stochastic latent models~\cite{hafner2025dreamerv3}, but the small JEPA planners that now run on one GPU have not been tested this way.
+
+\section{Existing work and its limitations}
+
+\textbf{Flow-JEPA}~\cite{huo2026flowjepa} replaces pointwise regression with trajectory-level flow matching and raises mean success over LeWM from 86\% to 92\% on clean observations and from 67\% to 86\% under localized observation noise. But its perturbations are pixel noise, not transition noise, and it plans with a risk-neutral terminal cost. \textbf{Branch-JEPA}~\cite{song2026branchjepa} predicts a finite set of latent futures and is evaluated on Argoverse~2 and OGBench graph tasks, not on stochastic contact. \textbf{LeWAM}~\cite{fu2026lewam} adds a flow-matching \emph{action} head to LeWM, but its dynamics remain deterministic. Zhong et al.~\cite{zhong2026calibrated} score action chunks with risk heads and a shield, and SLS$^2$~\cite{nath2026sls2} puts conformal latent error bounds inside robust MPC; neither draws uncertainty from a generative predictor's samples. A targeted (not exhaustive) search found no work combining a stochastic JEPA predictor with risk-aware planning under stochastic dynamics.
+
+\section{Proposed method: CVaR-LeWM}
+
+\paragraph{Stochastic environments.} Using stable-worldmodel~\cite{maes2026swm}, we add transition noise to two LeWM tasks. In PushT~\cite{chi2023diffusionpolicy}, each step applies a random impulse to the T-block with probability $p\in\{0,0.05,0.15\}$, and friction and mass are resampled per episode. In TwoRoom, a slip region near the door adds action noise. 
+
+\paragraph{Flow-matching predictor.} We freeze the pretrained LeWM encoder $E_\phi$, set $z_t=E_\phi(o_t)$, and train a conditional flow-matching head~\cite{lipman2023flow} on transitions from the stochastic environments:
+\begin{equation}
+z^\tau=(1-\tau)\,\epsilon+\tau\, z_{t+1},\qquad
+\mathcal{L}_{\mathrm{FM}}=\E_{\tau,\epsilon}\big\|v_\theta(z^\tau,\tau;z_t,a_t)-(z_{t+1}-\epsilon)\big\|^2,\qquad \epsilon\sim\mathcal{N}(0,I),
+\end{equation}
+with $\tau\sim\mathcal{U}[0,1]$. Sampling integrates $\dot z=v_\theta$ from $\epsilon$ with a few Euler steps, and autoregressive rollout gives $S$ futures $\hat z^{(1:S)}_{H}$ for actions $a_{1:H}$. SIGReg already pushes LeWM embeddings toward an isotropic Gaussian, so source and data share a scale.
+
+\paragraph{Risk-sensitive CEM.} For each CEM~\cite{deboer2005cem} candidate, define sampled goal costs $c^{(s)}(a)=\|\hat z^{(s)}_H-z_g\|^2$ and score the candidate by the empirical CVaR of its worst $\alpha$-fraction~\cite{rockafellar2000cvar}:
+\begin{equation}
+J_\alpha(a)=\cvar_\alpha\big[c(a)\big]=\min_{\eta}\;\eta+\tfrac{1}{\alpha}\,\E\big[(c(a)-\eta)_+\big]\;\approx\;\tfrac{1}{\lceil \alpha S\rceil}\textstyle\sum_{s\in\mathcal{W}_\alpha(a)}c^{(s)}(a),
+\end{equation}
+where $\mathcal{W}_\alpha(a)$ indexes the $\lceil\alpha S\rceil$ largest costs. Setting $\alpha=1$ gives risk-neutral planning with the same stochastic model, which separates the effect of a better model from that of the risk term. All candidates in a CEM iteration share noise seeds $\epsilon^{(1:S)}$ (common random numbers), so differences in $J_\alpha$ reflect the actions, not sampling luck. We also test $\bar c+\beta\,\mathrm{std}(c)$.
+
+\section{Experimental plan}
+
+\textbf{Baselines.} Three predictor families with matched parameter counts: deterministic LeWM regression, a $K$-head mixture with winner-take-all assignment (Branch-JEPA style), and the flow head. Each is crossed with mean, mean$+\beta$std and CVaR$_\alpha$ costs. \textbf{Metrics.} Success rate with 95\% bootstrap confidence intervals (100 episodes $\times$ 2 seeds per cell), worst-10\% final cost, failure rate at each $p$, and time per plan. \textbf{Ground-truth calibration.} From fixed states and action sequences we roll out the true simulator with 32 noise seeds, encode the outcomes, and compare them to predicted samples via the energy score~\cite{gneiting2007scoring}, cost-interval coverage and the Spearman correlation of predicted versus realized spread. \textbf{Ablations.} $\alpha\in\{0.1,0.25,0.5,1\}$, sample count $S\in\{4,8,16\}$, stochasticity level $p$, and number of flow integration steps. \textbf{Hypotheses.} (H1) Stochastic heads match the deterministic head at $p=0$ and pull ahead as $p$ grows. (H2) For a fixed head, CVaR lowers worst-10\% cost and failure rate at a small cost in mean success. (H3) Predicted spread tracks realized spread. \textbf{Compute (estimate).} About 18 GPU-hours to train heads and 40 to evaluate on one GPU; planning latency is measured in week 1. \textbf{Fallback.} If the frozen encoder misses outcome differences, fine-tune it with SIGReg; if CVaR fails to beat the mean cost, H3 still tests whether JEPA predictors capture dynamics uncertainty.
+
+\section{Novelty, significance and timeline}
+
+Flow-matching JEPA predictors already exist~\cite{huo2026flowjepa}, so we do not claim them. The new part is the combination: sampled latent dynamics inside LeWM, a tail-risk CEM objective built on those samples, \emph{dynamics} noise, and calibration against simulator ground truth. A positive result gives single-GPU latent planners a principled way to avoid plans that only work on average; a negative one shows where JEPA world models stop being trustworthy as stochastic models. Timeline (Oct 26 -- Dec 20):
+
+
+\vspace{0.3em}
+\noindent{\footnotesize
+\begin{tabularx}{\textwidth}{@{}c>{\raggedright\arraybackslash}X@{\hspace{1.2em}}c>{\raggedright\arraybackslash}X@{}}
+\toprule
+Wk & Milestone & Wk & Milestone \\
+\midrule
+1 & Reload LeWM; time planning; add PushT dynamics noise & 5 & Thanksgiving (light): calibration rollouts \\
+2 & Collect data at three $p$; deterministic head & 6 & TwoRoom slip; full grid, two seeds \\
+3 & Mixture and flow heads; sampled CEM rollouts & 7 & $\alpha$, $\beta$, $S$ ablations; tail cost, latency \\
+4 & CVaR and mean$+\beta$std costs; first curves & 8 & Final report, figures, code release \\
+\bottomrule
+\end{tabularx}}
+
+{\small
+\bibliographystyle{plainnat}
+\bibliography{refs}
+}
+
+\end{document}

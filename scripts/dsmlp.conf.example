@@ -1,0 +1,41 @@
+# Copy to scripts/dsmlp.conf (git-ignored) and fill in. Read by the laptop-side scripts
+# (_common.sh, sync.sh, remote.sh, worker.sh, submit_job.sh). Plain bash assignments only.
+
+# Host alias from ~/.ssh/config (see SETUP.md step 2). Must use ControlMaster so one
+# password + Duo login is reused by every script for 8 h.
+SSH_HOST="dsmlp"
+
+# ECE 285 workspace id (from `ssh dsmlp 'bash -lc "workspace -l"'`, 2026-11-10).
+# Empty = default workspace (GPU time then charged to ORG_ON_DEMAND).
+WS="ECE285_FA26_002"
+
+# Course image; pinned so the worker pod (where the venv is built) and GPU pods match.
+IMAGE="ghcr.io/ucsd-ets/scipy-ml-notebook:2025.1-stable"
+DEFAULT_GPU_CLASS="medium"
+LAUNCH="/opt/launch-sh/bin/launch.sh"
+
+# Where the repo mirror lives, seen two ways. The same directory must be both:
+#   on the LOGIN node, relative to your login home (rsync target), and
+#   inside PODS (single quotes: $HOME is expanded inside the pod).
+# Verified 2026-11-10 with a probe pod: login ~ (/dsmlp/home-fs03/03/003/rnambimadom) IS the pod's
+# ~/private. The pod's $HOME is the ECE 285 workspace home (/dsmlp/workspaces-fs05/ECE285_FA26_002/home/rnambimadom).
+REMOTE_ROOT="cvar-lewm"
+POD_ROOT='$HOME/private/cvar-lewm'
+
+# Per-job code snapshots, so later edits never change a running GPU job.
+SNAP_REMOTE="cvl-snapshots"
+SNAP_POD='$HOME/private/cvl-snapshots'
+
+# Big files (checkpoints, datasets): STABLEWM_HOME, seen both ways.
+STORE_REMOTE="stablewm"
+
+# CPU-only worker pod where commands run. Free (no SU), ends after WORKER_HOURS (max 12).
+# Namespace limit 8 CPU / 64 GB / 1 GPU: worker (4, 16) + one GPU job (4, 16) fits.
+WORKER_NAME="cvl-worker"
+WORKER_CPU=4
+WORKER_MEM_GB=16
+WORKER_HOURS=12
+
+# GPU job pods
+GPU_CPU=4
+GPU_MEM_GB=16

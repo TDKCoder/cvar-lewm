@@ -1,0 +1,19 @@
+# --- CVaR-LeWM additions (append to the repo's .gitignore) ---
+.venv/
+runs/
+jobs/logs/
+*.ckpt
+*.pt
+*.h5
+*.h5.zst
+*.tar.zst
+wandb/
+.cache/
+__pycache__/
+.ipynb_checkpoints/
+CLAUDE.local.md
+.claude/settings.local.json
+scripts/dsmlp.conf
+.venv-analysis/
+.env
+.env.*

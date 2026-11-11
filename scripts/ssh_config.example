@@ -1,0 +1,13 @@
+# Append to ~/.ssh/config in WSL (not Windows). Replace <ADuser> with your UCSD AD username.
+# ControlMaster keeps one authenticated connection open for 8 h, so you type the password and
+# approve Duo once, and every script (and Claude) reuses it without prompting.
+
+Host dsmlp
+    HostName dsmlp-login.ucsd.edu
+    User <ADuser>
+    IdentityFile ~/.ssh/id_ed25519
+    ControlMaster auto
+    ControlPath ~/.ssh/cm-%r@%h-%p
+    ControlPersist 8h
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
