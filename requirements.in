@@ -1,0 +1,10 @@
+# Direct deps for the cluster venv. Installed by scripts/install_venv.sh with --torch-backend cu128;
+# the exact resolved set is in requirements.lock.txt. See docs/setup-report.md (install plan).
+# [format] (h5py, hdf5plugin) is needed by eval.py's HDF5Dataset; we skip [env] (mujoco, jax,
+# atari, ogbench) because PushT/TwoRoom only need pygame, pymunk, shapely, opencv.
+stable-worldmodel[train,format]==0.1.1
+pygame
+pymunk
+shapely
+opencv-python-headless
+pytest
