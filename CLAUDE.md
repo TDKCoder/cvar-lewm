@@ -55,13 +55,19 @@ non-trivial change). Proposal source: `docs/proposal/proposal.tex`.
    `docs/setup-report-pod.txt` (Phase 0). If the pod can't reach a download, get it on the laptop
    and `scripts/sync.sh put` it. Never try to tunnel or proxy around the firewall.
 8. Ask before deleting anything outside `runs/smoke-*` and `/tmp`.
+9. **CPU parallelism uses `CVL_NCPU`.** DataLoader `num_workers`, multiprocessing/joblib/concurrent
+   pools and any thread count read `int(os.environ["CVL_NCPU"])`, never `os.cpu_count()` or
+   `nproc`: those report every core on the node (128-256), not the pod's limit (4). `nproc` only
+   looks right because env.sh sets `OMP_NUM_THREADS`, which GNU nproc honors.
 
 ## Environment on the cluster
 
 `scripts/env.sh` (sourced by remote.sh and job scripts) sets `PROJECT_ROOT`, `STABLEWM_HOME`,
 `RUNS_DIR` (always the mirror's `runs/`), `VENV_DIR` (`~/private/.venvs/cvar-lewm`, shared by all
 code snapshots), caches under `~/private/.cache`, `WANDB_MODE=offline`, `PYTHONUNBUFFERED=1`,
-`PYTHONPATH=$PROJECT_ROOT`, and activates the venv if it exists. Target Python 3.10 (LeWM).
+`PYTHONPATH=$PROJECT_ROOT`, `CVL_NCPU` (the pod's cgroup CPU limit, rounded up) with
+`OMP/MKL/OPENBLAS/NUMEXPR_NUM_THREADS` defaulting to it, and activates the venv if it exists.
+Target Python 3.10 (LeWM).
 
 ## Layout
 

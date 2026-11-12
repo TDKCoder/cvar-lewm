@@ -104,11 +104,11 @@ cd ~ && claude
 ```
 
 Paste the **Repo setup** prompt from `~/kit/cvar-lewm-agent-kit/KICKOFF_PROMPT.md`. Claude clones
-your fork to `~/cvar-lewm`, adds `upstream`, copies the kit in, scaffolds `cvar/`, makes the local
-analysis venv, and commits. When it's done, exit Claude and run:
+your fork to `~/projects/ECE285/Project/cvar-lewm`, adds `upstream`, copies the kit in, scaffolds
+`cvar/`, makes the local analysis venv, and commits. When it's done, exit Claude and run:
 
 ```bash
-cd ~/cvar-lewm && git push origin main        # username TDKCoder, password = the GitHub token
+cd ~/projects/ECE285/Project/cvar-lewm && git push origin main        # username TDKCoder, password = the GitHub token
 cp scripts/dsmlp.conf.example scripts/dsmlp.conf
 # WS and paths are already right for your account; no edits needed
 scripts/worker.sh start                        # free CPU pod, ~1 min
@@ -120,7 +120,7 @@ If that last line prints a pod hostname, everything is wired up.
 ## Step 6. Kick off
 
 ```bash
-cd ~/cvar-lewm && claude
+cd ~/projects/ECE285/Project/cvar-lewm && claude
 ```
 
 Switch to plan mode (Shift+Tab) and paste the **Kickoff** prompt.
@@ -129,12 +129,12 @@ Switch to plan mode (Shift+Tab) and paste the **Kickoff** prompt.
 
 ```bash
 ssh dsmlp true                                 # once per 8 h: password + Duo
-cd ~/cvar-lewm && claude --continue
+cd ~/projects/ECE285/Project/cvar-lewm && claude --continue
 ```
 
 - Claude starts the worker if it has expired (`scripts/worker.sh start` is free).
 - When Claude says a GPU job is ready, in a **second** WSL terminal:
-  `cd ~/cvar-lewm && scripts/submit_job.sh jobs/queue/<name>.sh` (shows SU, asks y/N).
+  `cd ~/projects/ECE285/Project/cvar-lewm && scripts/submit_job.sh jobs/queue/<name>.sh` (shows SU, asks y/N).
   Submit big jobs off-peak: **1 AM-4 PM Pacific** (that's 3 AM-6 PM Central). The script uses
   Pacific time whatever your laptop's zone is.
 - Watch a job: `ssh dsmlp kubectl get pods`, `ssh dsmlp tail -f cvar-lewm/jobs/logs/<name>.out`.

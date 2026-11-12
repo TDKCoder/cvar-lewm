@@ -12,8 +12,8 @@ whether it changes anything promised in the proposal.
   Our work is layered on top (agent kit, `cvar/` package) without editing upstream files.
 - Public means anything committed is visible: no credentials, cluster usernames beyond what's
   already in the kit, or large data in git.
-- Laptop checkout lives at `~/projects/ECE285/Project/cvar-lewm` (SETUP.md says `~/cvar-lewm`;
-  the scripts are path-independent).
+- Laptop checkout lives at `~/projects/ECE285/Project/cvar-lewm` (SETUP.md's commands updated
+  2026-11-12; the scripts are path-independent).
 - Effect on proposal: none.
 
 ## 2026-11-10: Claude Code runs on the laptop; commands run in a CPU worker pod
