@@ -18,11 +18,13 @@ Built on `stable-worldmodel` (the platform LeWM uses). Implement as wrappers in 
 
 | Env | Stochasticity | Levels |
 |---|---|---|
-| PushT | per step, with prob `p`, apply a random impulse to the T-block (random direction, magnitude from a fixed range); per episode, resample friction and mass from fixed ranges | `p in {0, 0.05, 0.15}` |
+| PushT | per step, with prob `p`, a random pose kick to the T-block (random direction and length, small random rotation; applied before the step). Separately, flag `randomize_physics`: per episode, resample ground drag and block mass. Definitions in `docs/decisions.md` (2026-11-12) | `p in {0, 0.05, 0.15}`, `randomize_physics` off; secondary: on at `p in {0, 0.15}` |
 | TwoRoom | a slip region near the door adds action noise (Gaussian, fixed std) inside the region | off / on |
 
 Requirements:
-- `p = 0` (and slip off) reproduces the original env **bit-for-bit** for a fixed seed. Unit test it.
+- `p = 0` (and slip off, `randomize_physics` off) reproduces the original env **bit-for-bit** for a fixed seed. Unit test it.
+- Kick draws `(u, theta, d, rho)` happen every step whatever p is, and fire iff `u < p`, so the
+  kicked steps at p = 0.05 are a subset of those at p = 0.15 (paired comparisons). Unit test it.
 - All randomness flows from one seeded `np.random.Generator` per env instance, so the same
   `(env_seed, actions)` gives the same trajectory. Unit test it.
 - Ranges (impulse magnitude, friction, mass, slip std) live in a config file, not in code. Pick them
@@ -92,6 +94,8 @@ doesn't beat the mean cost, H3 still answers whether JEPA predictors capture dyn
 Main grid (PushT): 3 heads x {mean, mean+std(beta=1), CVaR(alpha=0.25)} x p in {0, 0.05, 0.15}
 x 2 seeds x 100 episodes. Ablations on the flow head at p = 0.15: alpha in {0.1, 0.25, 0.5, 1},
 S in {4, 8, 16}, Euler steps in {1, 2, 4, 8}. TwoRoom: 3 heads x {mean, CVaR} x slip on/off.
+The main grid runs with `randomize_physics` off. Secondary condition (physics noise): `randomize_physics`
+on at p in {0, 0.15}, flow and deterministic heads, {mean, CVaR(alpha=0.25)}.
 
 ## 8. Compute budget
 
@@ -120,5 +124,5 @@ Confirm the final deadline with the course. Assuming Dec 20:
 | E | Dec 7-13 | Ablations; TwoRoom slip variant if on schedule |
 | F | Dec 14-20 | Final report, figures, code release |
 
-Cut order if behind: TwoRoom, then the beta sweep, then the S ablation. Never cut: p sweep with
+Cut order if behind: TwoRoom, then the `randomize_physics` condition, then the beta sweep, then the S ablation. Never cut: p sweep with
 CIs, CVaR vs mean on the flow head, calibration (H3).
