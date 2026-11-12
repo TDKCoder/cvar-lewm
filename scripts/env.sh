@@ -22,6 +22,32 @@ export HF_HOME="$CVL_STORE/.cache/huggingface"
 export TORCH_HOME="$CVL_STORE/.cache/torch"
 export MPLCONFIGDIR="$CVL_STORE/.cache/matplotlib"
 
+# CPU threads. os.cpu_count() (and nproc, unless OMP_NUM_THREADS is set) report every core on
+# the node (128-256 on DSMLP), not the pod's limit, so BLAS/OpenMP/torch would oversubscribe
+# the 4 CPUs we actually get. Read the cgroup CPU quota instead: v2 cpu.max
+# ("<quota> <period>" or "max <period>"), then v1 cfs_quota_us/cfs_period_us (-1 = unlimited),
+# else 4. Rounded up. Pre-set values win.
+_cvl_ncpu() {
+  local root="${1:-/sys/fs/cgroup}" quota="" period=""
+  if [ -r "$root/cpu.max" ]; then
+    read -r quota period < "$root/cpu.max" || true
+  fi
+  if ! [[ "$quota" =~ ^[0-9]+$ ]] && [ -r "$root/cpu/cpu.cfs_quota_us" ] && [ -r "$root/cpu/cpu.cfs_period_us" ]; then
+    quota="$(cat "$root/cpu/cpu.cfs_quota_us")"
+    period="$(cat "$root/cpu/cpu.cfs_period_us")"
+  fi
+  if [[ "$quota" =~ ^[0-9]+$ && "$period" =~ ^[0-9]+$ ]] && [ "$quota" -gt 0 ] && [ "$period" -gt 0 ]; then
+    echo $(( (quota + period - 1) / period ))
+  else
+    echo 4
+  fi
+}
+export CVL_NCPU="${CVL_NCPU:-$(_cvl_ncpu)}"
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-$CVL_NCPU}"
+export MKL_NUM_THREADS="${MKL_NUM_THREADS:-$CVL_NCPU}"
+export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-$CVL_NCPU}"
+export NUMEXPR_NUM_THREADS="${NUMEXPR_NUM_THREADS:-$CVL_NCPU}"
+
 export WANDB_MODE="${WANDB_MODE:-offline}"
 export PYTHONUNBUFFERED=1
 export TZ="America/Los_Angeles"
