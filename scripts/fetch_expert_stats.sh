@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Transient download of the LeWM PushT expert dataset into the worker's node-local /tmp (NOT the
+# ~/private quota), extract scaler stats + eval start/goal pairs into a small .npz under
+# $STABLEWM_HOME, then delete everything in /tmp. Run INSIDE the worker pod:
+#   scripts/remote.sh --bg fetch-expert "bash scripts/fetch_expert_stats.sh"
+# Sizes (2026-11-12): 13,136,247,974 B compressed; zstd frame content size 46,300,921,856 B.
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+source scripts/env.sh
+
+URL="https://huggingface.co/datasets/quentinll/lewm-pusht/resolve/main/pusht_expert_train.h5.zst"
+ZST_BYTES=13136247974
+H5_BYTES=46300921856
+W=/tmp/cvl-data
+OUT="$STABLEWM_HOME/pusht/expert_eval_states.npz"
+SUMMARY="$RUNS_DIR/phase0-expert-extract/summary.json"
+
+cleanup() { rc=$?; rm -rf "$W" /tmp/cvl-probe; echo "== cleanup: removed $W and /tmp/cvl-probe; exit rc=$rc at $(date -Is)"; }
+trap cleanup EXIT
+mkdir -p "$W"
+
+need=$(( (ZST_BYTES + H5_BYTES) / 1024 + 5 * 1024 * 1024 ))   # KiB, +5 GiB margin
+avail=$(df -Pk /tmp | awk 'NR==2 {print $4}')
+echo "== /tmp avail ${avail} KiB, need ${need} KiB"
+[ "$avail" -gt "$need" ] || { echo "not enough room in /tmp"; exit 1; }
+
+echo "== download $(date -Is)"
+curl -fL --retry 5 --retry-delay 10 -C - -sS -o "$W/expert.h5.zst" "$URL"
+got=$(stat -c %s "$W/expert.h5.zst"); echo "downloaded $got B $(date -Is)"
+[ "$got" = "$ZST_BYTES" ] || { echo "size mismatch (want $ZST_BYTES)"; exit 1; }
+
+echo "== decompress $(date -Is)"
+zstd -d --rm -q -o "$W/pusht_expert_train.h5" "$W/expert.h5.zst"   # --rm drops the .zst on success
+got=$(stat -c %s "$W/pusht_expert_train.h5"); echo "decompressed $got B $(date -Is)"
+[ "$got" = "$H5_BYTES" ] || { echo "size mismatch (want $H5_BYTES)"; exit 1; }
+
+# The image's python has h5py but not hdf5plugin; add it inside /tmp only if a filter is missing.
+if ! python3 -c "import h5py,sys; f=h5py.File(sys.argv[1]); [f[k][:1] for k in f]" "$W/pusht_expert_train.h5" 2>"$W/h5err"; then
+  echo "plain h5py can't read every column ($(tail -n1 "$W/h5err")); installing hdf5plugin into $W/pylib"
+  # --no-deps: pulling h5py/numpy 2 into PYTHONPATH shadowed the image's numpy 1.26 and broke the
+  # sklearn cross-check on 2026-11-12. Only `pixels` uses a filter (32001 = Blosc).
+  python3 -m pip install -q --no-cache-dir --no-deps --target "$W/pylib" hdf5plugin
+  export PYTHONPATH="$W/pylib:$PYTHONPATH"
+fi
+
+echo "== extract $(date -Is)"
+python3 -m cvar.data.extract_eval_states --h5 "$W/pusht_expert_train.h5" --out "$OUT" --summary "$SUMMARY"
+ls -l "$OUT"
+echo "FETCH_OK"
