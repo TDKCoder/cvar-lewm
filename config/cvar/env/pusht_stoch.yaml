@@ -1,0 +1,15 @@
+# Stochastic PushT (cvar/envs/stochastic_pusht.py). Definitions and formulas: docs/decisions.md
+# (2026-11-12 entries). Ranges are PROVISIONAL until the block-6 spread study picks them so that
+# an expert-ish open-loop plan visibly diverges at p = 0.15.
+p: 0.0                 # per-step probability of a kick; main sweep p in {0, 0.05, 0.15}
+
+kick:                  # T-block pose kick applied before the env step when u_t < p
+  dist_px: [5.0, 20.0] # d_t ~ U[lo, hi]  translation length (env pixels; workspace is 512 px)
+  rot_deg: 10.0        # rho_t ~ U[-rot, rot]  rotation (degrees)
+  backoff_halvings: 3  # if the kicked block overlaps the agent or a wall, halve (s = 1/2, 1/4, 1/8) then give up (s = 0)
+
+randomize_physics: false   # OFF for the whole main p-sweep (decision 2026-11-12)
+physics:                   # per-episode draws, applied only when randomize_physics is true
+  drag_rate: [10.0, 50.0]  # c ~ U[lo, hi] 1/s; ground drag dv/dt = -c v via space.damping = exp(-c). Upstream: c = inf (damping 0)
+  mass: [0.5, 2.0]         # m ~ U[lo, hi]; block mass with the moment of inertia held at its default (3000)
+  contact_friction: [0.0, 0.0]  # mu ~ U[lo, hi]; agent-block Coulomb friction (shape friction). Off by default

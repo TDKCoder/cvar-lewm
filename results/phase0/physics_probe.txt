@@ -1,0 +1,18 @@
+pymunk 7.3.1
+agent body type KINEMATIC: True | block mass 1.0 moment 3000.0 | shape frictions agent [0.0] block [0.0, 0.0] | damping 0.0 | block has .friction attr (stray python attr): True
+E1 velocity kick 200 px/s -> block moved 1.348 px; apply_impulse 200 -> 3.350 px
+E2 velocity_func 200 px/s for 10 substeps of 0.01 s -> moved 4.785 px (expect 20); after restoring default it moved 0.570 px more
+   (scale: seed 0 vs seed 1 random-action rollouts: pos  142.68 px  ang 689.74 deg  max-traj-pos  359.68)
+   (scale: seed 0 vs seed 2 random-action rollouts: pos  439.02 px  ang 290.06 deg  max-traj-pos  442.87)
+E0 determinism, same seed twice: pos    0.00 px  ang   0.00 deg  max-traj-pos    0.00
+E3 mass x0.25 only:           pos   84.38 px  ang  29.79 deg  max-traj-pos  105.14
+E3 mass+inertia x0.25:        pos    0.00 px  ang   0.00 deg  max-traj-pos    0.00
+E3 mass x4.0 only:           pos  174.28 px  ang  19.72 deg  max-traj-pos  174.28
+E3 mass+inertia x4.0:        pos    0.00 px  ang   0.00 deg  max-traj-pos    0.00
+E4 contact friction block 0.3, agent 1.0: pos  121.88 px  ang 133.46 deg  max-traj-pos  124.56
+E4 contact friction block 1.0, agent 1.0: pos   53.22 px  ang   8.25 deg  max-traj-pos   95.26
+E5 space.damping 1e-06 (keeps 0.871/substep): pos  153.48 px  ang 134.58 deg  max-traj-pos  266.02
+E5 space.damping 0.001 (keeps 0.933/substep): pos  286.35 px  ang 419.88 deg  max-traj-pos  289.40
+E5 space.damping 0.1 (keeps 0.977/substep): pos   68.05 px  ang 369.19 deg  max-traj-pos  434.08
+E6 block_cog (10, 0): pos  173.41 px  ang  72.42 deg  max-traj-pos  173.41
+E6 block_cog (0, 15): pos    8.01 px  ang   1.74 deg  max-traj-pos   38.50
