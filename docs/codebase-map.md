@@ -3,7 +3,7 @@
 Built 2026-11-12 from the code (lewm-codebase skill procedure). LeWM files are the repo root at
 upstream commit `8edfeb3` (2026-05-22). stable-worldmodel ("swm") paths are relative to the
 installed package (`stable_worldmodel/`), read from the `stable_worldmodel-0.1.1` wheel. Items
-marked **[verify]** need the venv and are checked in block 4/6 tests.
+marked **[verify]** needed the venv; all were checked in blocks 4 and 6 (2026-11-13).
 
 Shapes: `B` envs being planned, `N` CEM candidates (`num_samples`), `S` our noise samples,
 `T` time, `D = 192` latent dim, `A = 2` env action dim, `action_block = 5`, so `A_blk = 10`.
@@ -22,7 +22,10 @@ Shapes: `B` envs being planned, `N` CEM candidates (`num_samples`), `S` our nois
   exist in swm 0.1.1** (`wm/` = `loss.py, probes.py, utils.py`). So `load_pretrained("quentinll/lewm-pusht")`
   fails, and the README conversion snippet fails too: it splats `**cfg["predictor"]`, including
   `_target_`, into `ARPredictor`. Fix: rewrite the targets to `jepa.JEPA`, `module.ARPredictor`,
-  `module.Embedder`, `module.MLP` (block 4).
+  `module.Embedder`, `module.MLP` (block 4). **Done:** `cvar/utils/checkpoint.py` rewrites them in place
+  (original kept as `config.hf.json`), then `load_pretrained("pusht/lewm")` loads strictly. Needs
+  **transformers < 5**: the weights use transformers-4 ViT names (`encoder.encoder.layer.N.attention.attention.query`),
+  which transformers 5 renamed (`encoder.layers.N.attention.q_proj`).
 
 ## 1. Model (`jepa.py`, `module.py`)
 
@@ -35,7 +38,7 @@ Shapes: `B` envs being planned, `N` CEM candidates (`num_samples`), `S` our nois
 | `Embedder` (action encoder) | `module.py:189` | Conv1d(k=1) 10->10, then MLP 10->40->192. Input is the 10-dim action block (5 env steps x 2). |
 | `SIGReg` | `module.py:10` | Epps-Pulley test on 1024 random projections; training only (`config/train/lewm.yaml`: weight 0.09). |
 | latent | | **`D = 192`** (`embed_dim`), **history 3** (`history_size`); `z_t` = projected CLS token. |
-| parameter counts | | **[verify]** in block 4 (predictor, action_encoder, pred_proj, encoder separately). |
+| parameter counts | `tests/test_pretrained_cpu.py` | encoder 5,501,376; **predictor 10,791,360**; action_encoder 156,206; projector 792,768; pred_proj 792,768; total 18,034,478 (`results/phase0/pretrained_cpu.json`). Predictor path (predictor + action_encoder + pred_proj) = 11,740,334: the budget our heads match within 10%. |
 
 ## 2. Cost model and planning (where CVaR plugs in)
 
@@ -80,9 +83,9 @@ pairs + 1,000 of ours), extracted from a transient copy.
 | success | `env.py:347` | `‖goal[:4] - state[:4]‖ < 20` (agent xy + block xy, pixels) **and** block angle error `< π/9`. |
 | state | `env.py:360` | `(agent x, y, block x, y, block θ mod 2π, agent vx, vy)`, float64 (7); `proprio = (agent x, y, vx, vy)`. |
 | `_set_state` | `env.py:514` | sets agent pos/vel, block pos/angle, then one `space.step(dt)`. |
-| physics | `env.py:532` | gravity 0, **`space.damping = 0`**: pymunk keeps a fraction `damping^dt` of velocity each step, so dynamic bodies lose all velocity every substep. The block is quasi-static and only moves through contact resolution with the agent. **[verify]** empirically. |
-| friction / mass | `env.py:626` (`add_tee`) | `mass = 1`; inertia from `moment_for_poly`. **`body.friction = 1` is set on the Body**, but pymunk friction is a Shape attribute, so contact friction is probably the Shape default (0). **[verify]** |
-| agent body | `add_circle` (`env.py:598`) | type (kinematic?) **[verify]**; this decides whether block mass matters at all. |
+| physics | `env.py:532` | gravity 0, **`space.damping = 0`**: pymunk keeps a fraction `damping^dt` of velocity each step, so dynamic bodies lose all velocity every substep. The block is quasi-static and only moves through contact resolution with the agent. Verified: a 200 px/s velocity kick moves it 1.35 px (`results/phase0/physics_probe.txt`). |
+| friction / mass | `env.py:626` (`add_tee`) | `mass = 1`; inertia from `moment_for_poly`. **`body.friction = 1` is set on the Body**, but pymunk friction is a Shape attribute, so contact friction is the Shape default. Verified: all Shape frictions are 0; no pivot/gear constraint (probe). |
+| agent body | `add_circle` (`env.py:598`) | **KINEMATIC** (verified). Block mass alone matters (x4: 174 px final-pose change); mass and inertia scaled together is an exact no-op (probe). |
 | expert / collection policy | `envs/pusht/expert_policy.py` | `WeakPolicy`: uniform random relative actions clipped to a ±100 px box around the block. A random-near-block policy, not an expert. |
 
 **Consequences for the stochastic wrapper (block 6):**

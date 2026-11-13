@@ -1,0 +1,71 @@
+{
+ "torch": "2.11.0+cu128",
+ "threads": 4,
+ "cpu": "x86_64",
+ "load_s": 6.602222602814436,
+ "params": {
+  "encoder": 5501376,
+  "predictor": 10791360,
+  "action_encoder": 156206,
+  "projector": 792768,
+  "pred_proj": 792768,
+  "total": 18034478,
+  "predictor_path": 11740334
+ },
+ "frames_source": "/home/rnambimadom/private/stablewm/pusht/expert_eval_states.npz",
+ "encode_one_frame_s": 0.03505820222198963,
+ "emb_shape": [
+  1,
+  1,
+  192
+ ],
+ "start_goal_cost": 312.0809020996094,
+ "predict_one_step_s": 0.007191179320216179,
+ "pred_shape": [
+  1,
+  3,
+  192
+ ],
+ "plans": {
+  "tiny": {
+   "num_samples": 30,
+   "n_steps": 3,
+   "topk": 5,
+   "repeats": 3,
+   "solve_s": [
+    0.4689685832709074,
+    0.45441428758203983,
+    0.4805330913513899
+   ],
+   "solve_s_median": 0.4689685832709074,
+   "per_get_cost_s": 0.15632286109030247,
+   "actions_shape": [
+    1,
+    5,
+    10
+   ],
+   "actions_finite": true,
+   "final_cost": 99.29541015625
+  },
+  "default": {
+   "num_samples": 300,
+   "n_steps": 30,
+   "topk": 30,
+   "repeats": 3,
+   "solve_s": [
+    24.181616507470608,
+    23.377330392599106,
+    23.941484911367297
+   ],
+   "solve_s_median": 23.941484911367297,
+   "per_get_cost_s": 0.7980494970455766,
+   "actions_shape": [
+    1,
+    5,
+    10
+   ],
+   "actions_finite": true,
+   "final_cost": 1.398891568183899
+  }
+ }
+}
