@@ -1,0 +1,111 @@
+{
+ "npz": "/home/rnambimadom/private/stablewm/pusht/expert_eval_states.npz",
+ "checks": {
+  "scaler_action_n_equal": true,
+  "scaler_action_close": true,
+  "scaler_proprio_n_equal": true,
+  "scaler_proprio_close": true,
+  "scaler_state_n_equal": true,
+  "scaler_state_close": true,
+  "ep_len_matches_stored_column": true,
+  "upstream_rows_equal": true,
+  "upstream_episodes_equal": true,
+  "upstream_starts_equal": true,
+  "upstream_goal_same_episode": true,
+  "upstream_goal_step_plus_offset": true,
+  "upstream_stored_columns_equal_h5": true,
+  "ours_rows_equal": true,
+  "ours_episodes_equal": true,
+  "ours_starts_equal": true,
+  "ours_goal_same_episode": true,
+  "ours_goal_step_plus_offset": true,
+  "ours_stored_columns_equal_h5": true,
+  "frames_equal_h5": true
+ },
+ "details": {
+  "scaler_action": {
+   "n": [
+    2336736,
+    2336736
+   ],
+   "max_abs_diff_mean": 0.0,
+   "max_abs_diff_scale": 0.0,
+   "max_rel_diff_scale": 0.0,
+   "max_abs_diff_var": 0.0,
+   "input_dtype": "float32",
+   "sklearn_mean": [
+    -0.007812564379916172,
+    0.006860687229453032
+   ],
+   "sklearn_scale": [
+    0.20846744284501714,
+    0.20674862637362224
+   ]
+  },
+  "scaler_proprio": {
+   "n": [
+    2336736,
+    2336736
+   ],
+   "max_abs_diff_mean": 0.0,
+   "max_abs_diff_scale": 0.0,
+   "max_rel_diff_scale": 0.0,
+   "max_abs_diff_var": 0.0,
+   "input_dtype": "float32",
+   "sklearn_mean": [
+    228.81245369927169,
+    292.23052136298617,
+    -2.9210027281011395,
+    2.548780001444025
+   ],
+   "sklearn_scale": [
+    103.37358807129279,
+    98.92548714281784,
+    77.50031831485578,
+    76.86427067235248
+   ]
+  },
+  "scaler_state": {
+   "n": [
+    2336736,
+    2336736
+   ],
+   "max_abs_diff_mean": 0.0,
+   "max_abs_diff_scale": 0.0,
+   "max_rel_diff_scale": 0.0,
+   "max_abs_diff_var": 0.0,
+   "input_dtype": "float32",
+   "sklearn_mean": [
+    228.81245369927169,
+    292.23052136298617,
+    243.6124968389013,
+    275.25068937003124,
+    2.124715466746899,
+    -2.9210027281011395,
+    2.548780001444025
+   ],
+   "sklearn_scale": [
+    103.37358807129279,
+    98.92548714281784,
+    71.61788439508972,
+    73.3817644038044,
+    1.9151641088726212,
+    77.50031831485578,
+    76.86427067235248
+   ]
+  },
+  "episode_len_loop_s": 34.0,
+  "upstream_n_valid": 1869611,
+  "upstream_mismatched_columns": [],
+  "ours_n_valid": 1869611,
+  "ours_mismatched_columns": []
+ },
+ "all_ok": true,
+ "elapsed_s": 37.4,
+ "versions": {
+  "numpy": "2.2.6",
+  "h5py": "3.16.0",
+  "sklearn": "1.7.2",
+  "hdf5plugin": true
+ }
+}
