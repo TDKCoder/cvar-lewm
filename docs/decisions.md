@@ -3,6 +3,54 @@
 Newest on top. Format: `## YYYY-MM-DD: <choice>` then context, options considered, why, and
 whether it changes anything promised in the proposal.
 
+## 2026-11-13: Training data for the heads: noisy-expert replay + weak policy, CPU collection and encoding (recommended; awaiting OK)
+
+- Needs: per condition (main grid p in {0, 0.05, 0.15}; secondary `randomize_physics` at p in {0, 0.15}),
+  trajectories in the stochastic env whose states look like eval states (eval start/goal pairs are
+  expert states), and whose actions cover what CEM proposes (300 Gaussian candidates around the mean,
+  so well off the expert action). LeWM trains on windows of history 3 + 1 prediction at frameskip 5
+  starting at any row (`config/train/data/pusht.yaml`), so we store **one latent per env step**.
+- Measured (`results/phase0/data_probe.json`, CPU worker, 1 process, 4 threads): env 3,373 steps/s
+  without rendering, **416 steps/s with the 224 px render**; frozen encoder on CPU **41.7 frames/s**
+  (batch 64). Bytes per frame: raw 224 px 150,528; **224 px zlib-compressed in stacks 2,138**; 64 px
+  zlib 407; PNG / JPEG-90 at 224 px 6,207 / 4,937; a latent (192 x fp16) 384. PushT frames are mostly
+  flat colour.
+- Policy options:
+
+  | Option | Matches eval states | Covers CEM's off-expert actions | Cost |
+  |---|---|---|---|
+  | A. expert replay: expert start state + its action sequence, open loop, kicks on | yes | no | needs expert actions (below) |
+  | B. A + Gaussian action noise | near | partly | same |
+  | C. WeakPolicy-style random actions near the block | no (contact-heavy) | yes | none |
+  | D. CEM with pretrained LeWM, closed loop | yes (on-policy for planners) | yes | ~24 s per plan call on CPU (`pretrained_cpu.json`); thousands of episodes = days of CPU or tens of SU |
+
+- **Recommended: B + C at 3:1**, i.e. 3,000 noisy-expert replays (half with action noise 0, half with
+  sigma = 0.2 of the normalized action std) + 1,000 weak-policy episodes per condition, **4,000
+  episodes ≈ 492,000 env steps** (median expert length 123). The same start states and env seeds in
+  every condition, so the datasets are paired across p (coupled kick draws). Exclude every expert
+  episode that holds one of our 1,000 eval pairs or upstream's 50, so training never sees an eval
+  episode. Log `info["cvl_kick"]` and `cvl_physics` per step. D is rejected on cost.
+- Expert actions: A/B need the expert action sequences and start states, which the eval npz doesn't
+  hold. Getting them takes **one more transient download** into the worker's `/tmp` (13.1 GB, ~8 min,
+  same script pattern), keeping every non-pixel column (action, state, proprio, episode/step index:
+  about 0.14 GB raw) in `$STABLEWM_HOME`. **Needs Rohan's OK.**
+- Where: **collect and encode in the free CPU worker**, chunked by 100 episodes (atomic, resumable),
+  run through `snapshot_run.sh`. Full frames live only in the worker's `/tmp` until encoded.
+  Collection ≈ 0.33 h per condition in one process. CPU encoding ≈ 3.3 h per condition (9.8 h for the
+  3 main-grid conditions, 16.4 h for all 5), within the week-B schedule and 0 SU. Switch to a GPU
+  encode job only if the block-8 smoke job shows it costs well under 0.1 SU and the schedule is tight.
+  The smoke job will time GPU encoding too.
+- What we keep per condition (≈ 0.44 GB on the quota): latents for every step, fp16 (0.19 GB); **224 px
+  frames, zlib, for a 20% episode subset** (0.21 GB), for the SIGReg encoder fine-tune fallback; we
+  keep full resolution instead of low-res because the encoder takes 224 px input and compressed 224 px
+  frames cost about as much as raw 64 px ones; states/actions/kick logs (0.04 GB). Main grid ≈ 1.3 GB,
+  all 5 conditions ≈ 2.2 GB. **Depends on the `~/private` quota (unconfirmed).**
+- Normalization: the pretrained encoder and action encoder use the expert scaler stats (from the npz),
+  so every head uses those too. No stats from our data.
+- Size knob: if a head's validation loss is still falling with data, double to 8,000 episodes per
+  condition. Cost is linear (CPU encode +3.3 h, disk +0.44 GB per condition).
+- Effect on proposal: none in substance. The proposal didn't specify the data policy.
+
 ## 2026-11-13: Host-specific details stay out of the public repo
 
 - Context: pushing Phase 0 published the cluster username (already in `SETUP.md` /
