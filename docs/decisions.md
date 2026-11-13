@@ -3,6 +3,60 @@
 Newest on top. Format: `## YYYY-MM-DD: <choice>` then context, options considered, why, and
 whether it changes anything promised in the proposal.
 
+## 2026-11-13: Realized kick rate is a reported metric, per cell, next to nominal p
+
+- Context: kicks that would push the block into the agent or a wall are scaled back or vetoed
+  (2026-11-12 entry), so the noise a policy actually faces depends on how much it stays in
+  contact. If one head pushes more, it may face fewer full-size kicks than another at the same p.
+- Choice (Rohan): every PushT episode logs `n_steps`, `kicks_fired`, `kicks_full`
+  (`episodes.jsonl` contract in the `report-results` skill). Every cell reports
+  `fired_rate = sum(kicks_fired)/sum(n_steps)` (should match p) and
+  `full_rate = sum(kicks_full)/sum(n_steps)` with an episode-bootstrap CI, next to p.
+  `aggregate.py` checks that the heads' `full_rate` CIs overlap within each cell group
+  (`kick_check.md`); a mismatch is reported as a confound, not hidden. `verify_summary.py`
+  recomputes both rates independently and warns if `fired_rate` is more than 3 binomial SEs from p.
+  Spec section 5 updated. The spread study reports the same rates.
+- Effect on proposal: none (an added diagnostic).
+
+## 2026-11-13: Pretrained checkpoint: retargeted HF config; transformers < 5
+
+- `quentinll/lewm-pusht` (`config.json` 1,313 B; `weights.pt` 72,290,721 B, sha256 `48938400…5b607`)
+  is in `$STABLEWM_HOME/checkpoints/pusht/lewm/`. `cvar/utils/checkpoint.py` rewrites the config's
+  Hydra targets (`stable_worldmodel.wm.lewm.*`, missing in swm 0.1.1) to `jepa.JEPA`,
+  `module.{ARPredictor,Embedder,MLP}` and keeps the original as `config.hf.json`. Then the stock
+  `swm.wm.utils.load_pretrained("pusht/lewm")`, which is what `eval.py policy=pusht/lewm` calls,
+  loads it with a strict state-dict match. No upstream file edited.
+- **transformers pinned < 5** (`requirements.in`): the weights use transformers-4 ViT parameter
+  names. transformers 5.20.2 (first resolution) renamed them, so the strict load failed on all 198
+  encoder keys. **datasets >= 3**: with transformers < 5 the resolver fell back to datasets 2.14,
+  which breaks `import stable_pretraining.backbone` with current pyarrow. Both are now caught by the
+  venv build's import check.
+- CPU numbers (`results/phase0/pretrained_cpu.json`, 4 threads, torch 2.11): one plan call with the
+  eval config (CEM 300 samples x 30 iterations, top 30, horizon 5) takes a median of 23.9 s (0.80 s per
+  `get_cost`). The predictor has 10,791,360 parameters; the predictor path (with action encoder and
+  pred_proj) has 11,740,334, which is the budget our heads match.
+- Effect on proposal: none.
+
+## 2026-11-13: Ephemeral project venv in each pod's /tmp, built from a lock file
+
+- Context: `~/private` is near its quota (2026-11-12). A CUDA venv is 8.3 GB (mostly the nvidia
+  wheels).
+- Choice (Rohan): no persistent venv. `scripts/ensure_venv.sh` builds `/tmp/cvl-venv` from
+  `requirements.lock.txt` when the pod lacks it, and is a no-op otherwise. uv, its cache and Python
+  3.10 live in `/tmp` too. `scripts/withvenv.sh` wraps remote commands; GPU job scripts call
+  `ensure_venv.sh` first and log its duration to `env.txt`. A build stamp (lock hash) marks a
+  finished venv, and `env.sh` only activates a stamped one. Concurrent callers serialize on a flock.
+- Measured (`runs/_bg/venv-builds.tsv`, CPU worker its-dsmlp-n26): **cold build from the lock
+  (no uv, cache or Python in /tmp, as in a fresh GPU pod) 143 s and 146 s** (packages 118-124 s,
+  import check 16-25 s). Warm-cache rebuild 21-41 s; up-to-date check 0.05 s. Disk in /tmp: venv
+  8.3 GB + uv cache 8.3 GB + Python 87 MB. Per-job overhead at 146 s = 0.041 GPU-h, i.e. 0.041 SU
+  peak / 0.020 SU off-peak on `medium` (spec section 8 rates). GPU nodes may download faster or
+  slower; every job logs its own build time in `env.txt`.
+- Also learned: `remote.sh` re-syncs the NFS mirror, which replaced `ensure_venv.sh` under a running
+  bash ("Stale file handle", build killed). Long-running scripts (`ensure_venv.sh`,
+  `fetch_expert_stats.sh`) now re-exec from a private copy in `/tmp`.
+- Effect on proposal: none. Adds a fixed per-job overhead to every GPU job's SU cost.
+
 ## 2026-11-12: PushT stochasticity = pose kicks; "friction" = ground drag; "mass" = mass at fixed inertia
 
 - Context: what the PushT physics actually does (swm 0.1.1 `envs/pusht/env.py`, measured with
@@ -78,6 +132,14 @@ whether it changes anything promised in the proposal.
   sampler matched `eval.py`'s literal loop on synthetic data. The scaler formula matched sklearn
   (max abs diff 0.0) on synthetic data. **Not** cross-checked by sklearn on the real columns
   (numpy-2 shadowing in that run).
+- **2026-11-13 re-check on the real file** (second transient download, `fetch_expert_stats.sh --verify`
+  -> `cvar/data/verify_eval_states.py`, which shares no code with the extractor and runs eval.py's
+  code verbatim; `results/phase0/expert_eval_states_verify.json`): sklearn StandardScaler on the real
+  columns matches the stored stats exactly (max abs diff 0.0 for mean, scale, var; n = 2,336,736);
+  eval.py's literal per-episode length loop + sampling reproduces both sets' global rows, episodes
+  and starts (50 at seed 42, 1,000 at seed 0); episode lengths match the stored `ep_len`; every
+  stored init/goal column and the 8 frames equal the h5 rows. 20/20 checks pass. Each pair's global
+  row index is stored (`<set>_row_init`, `<set>_row_goal`), so later checks don't need the dataset.
 - Effect on proposal: none.
 
 ## 2026-11-11: Repo is a public fork of upstream LeWM
