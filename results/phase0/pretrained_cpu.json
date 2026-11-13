@@ -12,7 +12,7 @@
   "total": 18034478,
   "predictor_path": 11740334
  },
- "frames_source": "/home/rnambimadom/private/stablewm/pusht/expert_eval_states.npz",
+ "frames_source": "<home>/private/stablewm/pusht/expert_eval_states.npz",
  "encode_one_frame_s": 0.03505820222198963,
  "emb_shape": [
   1,

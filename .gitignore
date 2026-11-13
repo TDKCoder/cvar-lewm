@@ -17,3 +17,5 @@ scripts/dsmlp.conf
 .venv-analysis/
 .env
 .env.*
+# host-specific details (raw pod audits, env dumps with paths): never committed
+docs/local/

@@ -61,6 +61,13 @@ non-trivial change). Proposal source: `docs/proposal/proposal.tex`.
    pools and any thread count read `int(os.environ["CVL_NCPU"])`, never `os.cpu_count()` or
    `nproc`: those report every core on the node (128-256), not the pod's limit (4). `nproc` only
    looks right because env.sh sets `OMP_NUM_THREADS`, which GNU nproc honors.
+10. **The repo is public: no host-specific details in committed files.** Raw pod audits, env dumps
+   and anything with the cluster username, UID, home/NFS export paths or pod/node hostnames go only in
+   git-ignored places (`docs/local/`, `runs/`). Committed reports and results get the redacted form
+   with placeholders `<user>`, `<uid>`, `<home>`, `<node>`: copy run outputs with
+   `python3 scripts/redact.py --copy runs/<x> results/<y>`. The literal values to redact are in
+   git-ignored `docs/local/redact.txt`. Run `python3 scripts/redact.py --check` (scans every tracked
+   file) before every commit and fix any hit first. Never force-push.
 
 ## Environment on the cluster
 

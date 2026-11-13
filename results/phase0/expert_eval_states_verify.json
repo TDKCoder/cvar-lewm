@@ -1,5 +1,5 @@
 {
- "npz": "/home/rnambimadom/private/stablewm/pusht/expert_eval_states.npz",
+ "npz": "<home>/private/stablewm/pusht/expert_eval_states.npz",
  "checks": {
   "scaler_action_n_equal": true,
   "scaler_action_close": true,

@@ -3,6 +3,18 @@
 Newest on top. Format: `## YYYY-MM-DD: <choice>` then context, options considered, why, and
 whether it changes anything promised in the proposal.
 
+## 2026-11-13: Host-specific details stay out of the public repo
+
+- Context: pushing Phase 0 published the cluster username (already in `SETUP.md` /
+  `dsmlp.conf.example`), UID, home and NFS export paths and node hostnames in reports and results.
+- Choice (Rohan): no force-push. A new commit replaces them with `<user>`, `<uid>`, `<home>`,
+  `<node>` (`scripts/redact.py`), so they remain in earlier commits' history. From now on raw audits
+  and env dumps go only to git-ignored `docs/local/` or `runs/`. Committed copies are made with
+  `redact.py --copy`, and `redact.py --check` runs before every commit (CLAUDE.md rule 10). The
+  literal values live in git-ignored `docs/local/redact.txt`, so the checker itself publishes nothing.
+  The unredacted pod audit is kept locally as `docs/local/setup-report-pod.raw.txt`.
+- Effect on proposal: none.
+
 ## 2026-11-13: Realized kick rate is a reported metric, per cell, next to nominal p
 
 - Context: kicks that would push the block into the agent or a wall are scaled back or vetoed
@@ -46,7 +58,7 @@ whether it changes anything promised in the proposal.
   3.10 live in `/tmp` too. `scripts/withvenv.sh` wraps remote commands; GPU job scripts call
   `ensure_venv.sh` first and log its duration to `env.txt`. A build stamp (lock hash) marks a
   finished venv, and `env.sh` only activates a stamped one. Concurrent callers serialize on a flock.
-- Measured (`runs/_bg/venv-builds.tsv`, CPU worker its-dsmlp-n26): **cold build from the lock
+- Measured (`runs/_bg/venv-builds.tsv`, CPU worker <node>): **cold build from the lock
   (no uv, cache or Python in /tmp, as in a fresh GPU pod) 143 s and 146 s** (packages 118-124 s,
   import check 16-25 s). Warm-cache rebuild 21-41 s; up-to-date check 0.05 s. Disk in /tmp: venv
   8.3 GB + uv cache 8.3 GB + Python 87 MB. Per-job overhead at 146 s = 0.041 GPU-h, i.e. 0.041 SU

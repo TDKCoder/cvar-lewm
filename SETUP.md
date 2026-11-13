@@ -76,7 +76,7 @@ handle that. Your workspace id is `ECE285_FA26_002` (already in `dsmlp.conf.exam
 
 ## Step 3. Storage layout (done: verified 2026-11-10)
 
-A probe pod showed that your login-node `~` (`/dsmlp/home-fs03/03/003/rnambimadom`) is the pod's
+A probe pod showed that your login-node `~` (`<home>`) is the pod's
 `~/private`, and the pod's `$HOME` is the small ECE 285 workspace home. The defaults in
 `dsmlp.conf.example` already match: the mirror is `~/cvar-lewm` on the login node and
 `~/private/cvar-lewm` in pods. Clean up on the login node:

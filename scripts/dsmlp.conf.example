@@ -17,8 +17,8 @@ LAUNCH="/opt/launch-sh/bin/launch.sh"
 # Where the repo mirror lives, seen two ways. The same directory must be both:
 #   on the LOGIN node, relative to your login home (rsync target), and
 #   inside PODS (single quotes: $HOME is expanded inside the pod).
-# Verified 2026-11-10 with a probe pod: login ~ (/dsmlp/home-fs03/03/003/rnambimadom) IS the pod's
-# ~/private. The pod's $HOME is the ECE 285 workspace home (/dsmlp/workspaces-fs05/ECE285_FA26_002/home/rnambimadom).
+# Verified 2026-11-10 with a probe pod: login ~ (<home>) IS the pod's
+# ~/private. The pod's $HOME is the ECE 285 workspace home (a different NFS export).
 REMOTE_ROOT="cvar-lewm"
 POD_ROOT='$HOME/private/cvar-lewm'
 

@@ -23,8 +23,8 @@ the user to the source page (`reference.md`) when a decision depends on it.
 - Over a one-off `ssh dsmlp <cmd>`, `kubectl` and `workspace` fail (kubectl falls back to
   localhost:8080). They only work in a login shell, so our scripts run everything through
   `bash -lc`. `rsync` (`/usr/bin/rsync`) works either way.
-- Login-node `~` = `/dsmlp/home-fs03/03/003/rnambimadom` = the pod's `~/private` (personal pool).
-- Pod `$HOME` with `-W ECE285_FA26_002` = `/dsmlp/workspaces-fs05/ECE285_FA26_002/home/rnambimadom`.
+- Login-node `~` = `<home>` (your personal NFS home) = the pod's `~/private` (personal pool).
+- Pod `$HOME` with `-W ECE285_FA26_002` = the workspace's own home (a different NFS export), not the login `~`.
 - `launch-scipy-ml.sh` without `-i` uses `scipy-ml-notebook:stable`; our scripts pin
   `2025.1-stable` to match the course presets.
 

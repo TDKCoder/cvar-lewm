@@ -1,7 +1,7 @@
 
 == identity
-whoami: cannot find name for user ID 23003
-user= host=cvl-worker date=2026-11-12T00:01:17-08:00 home=/home/rnambimadom
+whoami: cannot find name for user ID <uid>
+user= host=<node> date=2026-11-12T00:01:17-08:00 home=<home>
 
 == cpu/ram
 nproc=4
@@ -33,12 +33,12 @@ rsync  /usr/bin/rsync
 
 == disk
 Filesystem                                                                   Size  Used Avail Use% Mounted on
-its-dsmlp-fs05.ucsd.edu:/export/workspaces/ECE285_FA26_002/home/rnambimadom   69T  370G   68T   1% /home/rnambimadom
-its-dsmlp-fs03.ucsd.edu:/export/home/03/003/rnambimadom                      136T   57T   79T  42% /home/rnambimadom/private
+<node>:<home>   69T  370G   68T   1% <home>
+<node>:<home>                      136T   57T   79T  42% <home>/private
 home usage (excluding private):
-13G	/home/rnambimadom
+13G	<home>
 private usage:
-21G	/home/rnambimadom/private
+21G	<home>/private
 
 == network (HTTP status; 000 = unreachable)
 https://pypi.org/simple/                 200

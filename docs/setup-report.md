@@ -16,7 +16,7 @@ read-only probe run the same day through `scripts/remote.sh`. Every number below
 | Tools | git, pip, conda 24.3.0, mamba, curl, wget, rsync. **No uv.** |
 | Proxy env | none |
 | `/etc/podinfo` | absent in the worker (expected; batch GPU pods may differ) |
-| `whoami` | fails (no passwd entry for UID 23003); harmless |
+| `whoami` | fails (no passwd entry for UID <uid>); harmless |
 
 ## Network (from the pod)
 
@@ -43,7 +43,7 @@ and wheels from PyPI and download.pytorch.org.
 
 | Path | Filesystem | Used by us |
 |---|---|---|
-| `$HOME` = `/home/rnambimadom` (ECE285 workspace) | fs05, 69T total, 1% used | **13 G, all of it in `~/public`**; everything else is < 20 KB |
+| `$HOME` = `<home>` (ECE285 workspace) | workspace file server, 69T total, 1% used | **13 G, all of it in `~/public`**; everything else is < 20 KB |
 | `~/private` (personal pool) | fs03, 136T total, 42% used | **21 G**: `repro-project` 14 G, `vla-project` 6.1 G, `.vscode-server` 805 M, `.conda` 237 M, `cvar-lewm` 13 M |
 
 `df` reports the whole NFS export, not a per-user quota, and the pod has no `quota` command. **Neither
