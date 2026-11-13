@@ -12,8 +12,10 @@ non-trivial change). Proposal source: `docs/proposal/proposal.tex`.
   project's Python deps runs through:
   - `scripts/remote.sh "<cmd>"`: pushes this repo to the cluster mirror, then runs `<cmd>` in the
     worker from the mirror root with `scripts/env.sh` sourced. Exit code is the command's.
-  - `scripts/remote.sh --bg <name> "<cmd>"` for anything over ~5 min; it logs to
-    `runs/_bg/<name>.log`. Check with `scripts/remote.sh --no-sync "tail -n 30 runs/_bg/<name>.log"`
+  - `scripts/remote.sh --bg <name> "bash scripts/snapshot_run.sh <name> <cmd>"` for anything over
+    ~5 min (data collection, spread study, ...); it logs to `runs/_bg/<name>.log`. `snapshot_run.sh`
+    runs the command from a frozen `/tmp/cvl-snap/<name>-<time>/` copy of the repo (git SHA in its
+    `SNAPSHOT.txt`), so a later `remote.sh` sync can't change code under a running job. Check with `scripts/remote.sh --no-sync "tail -n 30 runs/_bg/<name>.log"`
     every few minutes, not in a tight loop.
   - `scripts/worker.sh status | start`: the worker ends after 12 h. If `remote.sh` says it's
     missing, start it (free) and rerun.
