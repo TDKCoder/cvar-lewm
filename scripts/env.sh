@@ -13,10 +13,12 @@ export STABLEWM_HOME="${STABLEWM_HOME:-$CVL_STORE/stablewm}"       # LeWM data +
 export RUNS_DIR="${RUNS_DIR:-$CVL_STORE/cvar-lewm/runs}"
 export PODINFO="${PODINFO:-/etc/podinfo}"                          # termination-warning files
 
-# The venv lives outside the repo so job snapshots share it.
-export VENV_DIR="${VENV_DIR:-$CVL_STORE/.venvs/cvar-lewm}"
-export UV_CACHE_DIR="$CVL_STORE/.cache/uv"
-export UV_PYTHON_INSTALL_DIR="$CVL_STORE/.uv-python"
+# The venv is ephemeral, in the pod's node-local /tmp (decision 2026-11-13): scripts/ensure_venv.sh
+# builds it from requirements.lock.txt when a pod doesn't have it (scripts/withvenv.sh wraps that).
+# uv, its cache and Python 3.10 live in /tmp too, so none of this touches the ~/private quota.
+export VENV_DIR="${VENV_DIR:-/tmp/cvl-venv}"
+export UV_CACHE_DIR="/tmp/uv-cache"
+export UV_PYTHON_INSTALL_DIR="/tmp/uv-python"
 export PIP_CACHE_DIR="$CVL_STORE/.cache/pip"
 export HF_HOME="$CVL_STORE/.cache/huggingface"
 export TORCH_HOME="$CVL_STORE/.cache/torch"
@@ -54,12 +56,13 @@ export TZ="America/Los_Angeles"
 
 # Tools installed without root (e.g. uv), and the project root on PYTHONPATH so
 # `python -m cvar...` and upstream modules import from any cwd.
-export PATH="$HOME/.local/bin:$CVL_STORE/tools/bin:$PATH"
+export PATH="$HOME/.local/bin:/tmp/uv-bin:$PATH"
 export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
 mkdir -p "$STABLEWM_HOME" "$RUNS_DIR" "$UV_CACHE_DIR" "$PIP_CACHE_DIR" "$HF_HOME" "$TORCH_HOME" "$MPLCONFIGDIR"
 
-if [ -f "$VENV_DIR/bin/activate" ]; then
+# Only a finished build (ensure_venv.sh writes the stamp last); never a half-built venv.
+if [ -f "$VENV_DIR/bin/activate" ] && [ -f "$VENV_DIR/.cvl-stamp" ]; then
   # shellcheck disable=SC1091
   source "$VENV_DIR/bin/activate"
 fi

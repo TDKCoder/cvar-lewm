@@ -14,6 +14,13 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 source scripts/env.sh     # RUNS_DIR points at the main mirror's runs/, shared across snapshots
 
+# Ephemeral venv in this pod's /tmp from the snapshot's requirements.lock.txt (decision 2026-11-13).
+# Cold build measured at 143 s on a CPU worker; the real time per job goes into env.txt below.
+t_venv=$(date +%s)
+bash scripts/ensure_venv.sh
+venv_s=$(( $(date +%s) - t_venv ))
+source scripts/env.sh     # now activates $VENV_DIR
+
 # Fixed per job so a resubmission resumes the same run directory.
 RUN_ID="REPLACE-job-name"
 RUN_DIR="$RUNS_DIR/$RUN_ID"
@@ -22,6 +29,7 @@ mkdir -p "$RUN_DIR"
 NVSMI="$(command -v nvidia-smi || echo /usr/local/nvidia/bin/nvidia-smi)"
 {
   echo "=== $(date -Is) start on $(hostname)"
+  echo "venv: ensure_venv.sh took ${venv_s}s ($(cat "$VENV_DIR/.cvl-stamp"))"
   "$NVSMI" || true
   echo "git: $(git rev-parse HEAD) dirty=$(git status --porcelain | wc -l)"
   python -c 'import torch,sys; print("python", sys.version.split()[0], "torch", torch.__version__, "cuda", torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)'

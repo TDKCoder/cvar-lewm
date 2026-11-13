@@ -63,11 +63,15 @@ non-trivial change). Proposal source: `docs/proposal/proposal.tex`.
 ## Environment on the cluster
 
 `scripts/env.sh` (sourced by remote.sh and job scripts) sets `PROJECT_ROOT`, `STABLEWM_HOME`,
-`RUNS_DIR` (always the mirror's `runs/`), `VENV_DIR` (`~/private/.venvs/cvar-lewm`, shared by all
-code snapshots), caches under `~/private/.cache`, `WANDB_MODE=offline`, `PYTHONUNBUFFERED=1`,
+`RUNS_DIR` (always the mirror's `runs/`), `VENV_DIR` (`/tmp/cvl-venv`: **ephemeral, per pod**, built
+from `requirements.lock.txt` by `scripts/ensure_venv.sh`; ~2.5 min cold, a no-op when current; uv,
+its cache and Python 3.10 live in `/tmp` too, nothing on the quota), caches under `~/private/.cache`, `WANDB_MODE=offline`, `PYTHONUNBUFFERED=1`,
 `PYTHONPATH=$PROJECT_ROOT`, `CVL_NCPU` (the pod's cgroup CPU limit, rounded up) with
-`OMP/MKL/OPENBLAS/NUMEXPR_NUM_THREADS` defaulting to it, and activates the venv if it exists.
-Target Python 3.10 (LeWM).
+`OMP/MKL/OPENBLAS/NUMEXPR_NUM_THREADS` defaulting to it, and activates the venv if a finished build
+exists. Target Python 3.10 (LeWM). **Every remote python command goes through
+`scripts/withvenv.sh`** (ensure + activate + exec), e.g. `scripts/remote.sh "scripts/withvenv.sh python -m ..."`;
+job scripts call `bash scripts/ensure_venv.sh` at the top. Change deps in `requirements.in`, then
+`bash scripts/ensure_venv.sh --from-in` and commit the new `requirements.lock.txt`.
 
 ## Layout
 
@@ -92,7 +96,7 @@ tests/                # pytest (run on the cluster)
 
 ## Commands
 
-- Tests (cluster): `scripts/remote.sh "python -m pytest -q tests/"`
+- Tests (cluster): `scripts/remote.sh "scripts/withvenv.sh python -m pytest -q tests/"`
 - Smoke run of anything: add `--smoke` (tiny data, 2 episodes, CPU, < 5 min)
 - Pull results: `scripts/sync.sh pull "<run glob>"`
 - Aggregate (local): `.venv-analysis/bin/python .claude/skills/report-results/scripts/aggregate.py "runs/<glob>" --out results/<name>`

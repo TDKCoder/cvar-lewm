@@ -8,3 +8,10 @@ pymunk
 shapely
 opencv-python-headless
 pytest
+# The HF LeWM weights use transformers-4 ViT parameter names (encoder.encoder.layer.N.attention.
+# attention.query); transformers 5 renamed them (encoder.layers.N.attention.q_proj), so a strict
+# load fails. swm[train] itself needs >= 4.50.
+transformers>=4.50,<5
+# With transformers<5 the resolver otherwise falls back to datasets 2.14 (2023), which calls
+# pyarrow.PyExtensionType (removed in recent pyarrow) on `import stable_pretraining.backbone`.
+datasets>=3
