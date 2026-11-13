@@ -12,7 +12,10 @@ Hard checks (exit 1 on failure):
   - success_rate and worst-10% cost recomputed exactly (rel. tol 1e-9)
   - bootstrap CI contains the point estimate
   - no duplicate (cell, seed, episode)
-Soft check (warning only): bootstrap CI vs Wilson score interval differ by > 0.05.
+  - PushT kick rates: fired_rate and full_rate = sums of kicks_fired / kicks_full over sum(n_steps)
+    recomputed exactly; full_rate CI contains its point estimate
+Soft checks (warning only): bootstrap CI vs Wilson score interval differ by > 0.05; fired_rate more
+than 3 binomial SEs from p (u_t ~ U[0,1) i.i.d. per step, so fired ~ Binomial(n_steps, p)).
 """
 import csv
 import glob
@@ -68,6 +71,7 @@ def main():
     files = sorted(set(files))
 
     raw = {}
+    kicks = {}
     seen = set()
     problems = []
     for f in files:
@@ -81,6 +85,9 @@ def main():
             seen.add(uniq)
             key = tuple(canon(r.get(k)) for k in fields)
             raw.setdefault(key, []).append((bool(r["success"]), float(r["final_cost"])))
+            if all(r.get(k) is not None for k in ("n_steps", "kicks_fired", "kicks_full")):
+                kick = kicks.setdefault(key, [0, 0, 0, float(r["p"])])
+                kick[0] += int(r["n_steps"]); kick[1] += int(r["kicks_fired"]); kick[2] += int(r["kicks_full"])
 
     rows = {tuple(canon(row.get(k)) for k in fields): row for row in summary}
 
@@ -112,6 +119,20 @@ def main():
             problems.append(f"{key}: bootstrap CI [{bl}, {bh}] excludes the point estimate {rate}"); ok = False
         if abs(bl - wl) > 0.05 or abs(bh - wh) > 0.05:
             warnings.append(f"{key}: bootstrap [{bl:.3f},{bh:.3f}] vs Wilson [{wl:.3f},{wh:.3f}] (small n or rate near 0/1?)")
+        if key in kicks:
+            steps, fired, full, p = kicks[key]
+            if not (close(float(row["fired_rate"]), fired / steps) and close(float(row["full_rate"]), full / steps)):
+                problems.append(f"{key}: kick rates {row['fired_rate']}/{row['full_rate']} vs raw "
+                                f"{fired / steps}/{full / steps}"); ok = False
+            if not (float(row["full_rate_lo"]) - 1e-12 <= full / steps <= float(row["full_rate_hi"]) + 1e-12):
+                problems.append(f"{key}: full_rate CI excludes its point estimate"); ok = False
+            se = math.sqrt(p * (1 - p) / steps) if 0 < p < 1 else 0.0
+            if abs(fired / steps - p) > 3 * se + 1e-12:
+                warnings.append(f"{key}: fired_rate {fired / steps:.4f} is > 3 SE from p={p} (n_steps={steps})")
+            print(f"    kicks: n_steps={steps} fired={fired} ({fired / steps:.4f}/step, p={p}) "
+                  f"full={full} ({full / steps:.4f}/step, {full / max(fired, 1):.3f} of fired)")
+        elif key and canon("pusht") == key[0]:
+            problems.append(f"{key}: pusht cell without n_steps/kicks_fired/kicks_full"); ok = False
         label = "/".join(x for x in key if x)
         print(f"{label[:60]:60s} {n:5d} {100*rate:7.1f} [{wl:.3f}, {wh:.3f}] [{bl:.3f}, {bh:.3f}] {worst:10.4g}  {'ok' if ok else 'MISMATCH'}")
 

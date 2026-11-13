@@ -16,11 +16,14 @@ Two modes: **experiment** (default; argument is a runs glob like `runs/eval-*-p0
 ```json
 {"run_id": "eval-flow-cvar-p015-s0", "env": "pusht", "p": 0.15, "head": "flow",
  "cost": "cvar", "alpha": 0.25, "beta": null, "S": 8, "n_euler": 4, "seed": 0,
- "episode": 17, "success": true, "final_cost": 0.0123, "plan_time_s": 0.41}
+ "episode": 17, "success": true, "final_cost": 0.0123, "plan_time_s": 0.41,
+ "n_steps": 50, "kicks_fired": 8, "kicks_full": 5}
 ```
 
-Required keys: `env, p, head, cost, seed, episode, success, final_cost`. Optional: `alpha, beta, S,
-n_euler, plan_time_s`. A cell is everything except `seed` and `episode` (pooled over seeds; pass
+Required keys: `env, p, head, cost, seed, episode, success, final_cost`, plus for `env == "pusht"`
+`n_steps` (env steps taken), `kicks_fired` (steps with `u_t < p`) and `kicks_full` (kicks applied at
+full size, `info["cvl_kick"][5] == 1`), also at p = 0 (zeros). Optional: `alpha, beta, S, n_euler,
+plan_time_s`. A cell is everything except `seed` and `episode` (pooled over seeds; pass
 `--by-seed` to keep seeds separate). `(cell, seed, episode)` must be unique: resumed runs must not
 duplicate episodes. The aggregator refuses duplicates.
 
@@ -36,7 +39,10 @@ Training runs write `runs/<RUN_ID>/metrics.jsonl` (`step, wall_s, train_loss, va
    `.venv-analysis/bin/python .claude/skills/report-results/scripts/aggregate.py "runs/<glob>" --out results/<exp-name>`
    Produces `summary.csv`, `summary.md`, `manifest.json` (input files, line counts, sha256).
    Metrics: success rate with 95% percentile-bootstrap CI (10,000 resamples, seed 0); worst-10%
-   final cost = mean of the top `ceil(0.1 n)` final costs, with bootstrap CI; failure rate; mean plan time.
+   final cost = mean of the top `ceil(0.1 n)` final costs, with bootstrap CI; failure rate; mean plan time;
+   for PushT the realized kick rates `fired_rate`, `full_rate` (= sum of kicks / sum of n_steps,
+   episode-bootstrap CI). `kick_check.md` compares `full_rate` across heads within each cell group:
+   **report every KICK-RATE MISMATCH** next to the head comparison it affects (spec section 5).
 3. **Verify independently.**
    `.venv-analysis/bin/python .claude/skills/report-results/scripts/verify_summary.py "runs/<glob>" results/<exp-name>/summary.csv`
    It recomputes counts, success rates and worst-10% from the raw files with a separate pure-Python
@@ -63,6 +69,7 @@ and name the cut you'd make. Save to `docs/status/YYYY-MM-DD.md` and show it to 
 
 ## Rules
 
+- Every PushT table and figure shows the realized full-size kick rate next to nominal `p`.
 - Never type a number into a report that didn't come from `summary.csv` or a script output in this
   session. Quote file paths next to numbers.
 - Report n with every rate. Report negative and null results in the same detail as positive ones.

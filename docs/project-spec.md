@@ -74,6 +74,16 @@ Per evaluation cell = (env, p, head, cost, alpha/beta, S, seed). Each cell has N
   Bootstrap CI.
 - **Failure rate** = 1 - success rate (reported separately because the hypotheses are about tails).
 - **Plan time** = mean wall-clock seconds per replanning call (GPU, after warm-up).
+- **Realized kick rate** (PushT; reported next to nominal `p` in every table and figure, and in the
+  spread study). Each episode logs `n_steps`, `kicks_fired` (steps with `u_t < p`) and `kicks_full`
+  (kicks applied at full size, `s = 1`). Per cell:
+  `fired_rate = sum(kicks_fired) / sum(n_steps)`, which should match `p` (the `u_t` are i.i.d. and
+  independent of the policy), and `full_rate = sum(kicks_full) / sum(n_steps)`, with a 95% CI by
+  bootstrap over episodes. `full_rate` depends on the policy: kicks into the agent or a wall are
+  scaled back or vetoed (about 0.56 p in contact-heavy play, `docs/decisions.md` 2026-11-12).
+  **Comparable across heads:** within each group of cells that differ only in the head, the heads'
+  `full_rate` CIs must overlap. If they don't, the heads faced different realized noise, and that
+  comparison is reported with this confound named (`aggregate.py` writes `kick_check.md`).
 - **Calibration** (from fixed states and action sequences; 32 true simulator rollouts vs S predicted):
   - Energy score in latent space: `ES = (1/S) sum_s ||X_s - y|| - (1/(2 S^2)) sum_{s,s'} ||X_s - X_s'||`,
     averaged over true outcomes `y`. Lower is better.
