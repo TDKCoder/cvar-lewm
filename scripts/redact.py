@@ -6,7 +6,7 @@
     python3 scripts/redact.py --check            # scan tracked + staged files; exit 1 on a hit
 
 Placeholders: <user>, <uid>, <home>, <node>. Generic patterns (cluster node / file-server hostnames,
-NFS export and /dsmlp home paths, host=... fields) live here. The literal username and UID live in
+NFS export and /dsmlp home paths, `host=` fields) live here. The literal username and UID live in
 the git-ignored docs/local/redact.txt (one `literal<TAB>placeholder` per line, # comments), so this
 public script never contains them. Public service hostnames (dsmlp-docs, dsmlp-login, reserve,
 datahub) are left alone.
@@ -26,7 +26,7 @@ GENERIC = [  # order matters: whole NFS export specs before bare hostnames
     (re.compile(r"its-dsmlp-fs\d+(?:\.ucsd\.edu)?:/export/" + END), "<node>:<home>"),
     (re.compile(r"/dsmlp/(?:home|workspaces)-fs\d+/" + END), "<home>"),
     (re.compile(r"its-dsmlp-[a-z]+\d+(?:\.ucsd\.edu)?"), "<node>"),
-    (re.compile(r"\b(host(?:name)?=)(?!<node>|\$)\S+"), r"\1<node>"),  # not code like host=$(hostname)
+    (re.compile(r"\b(host(?:name)?=)(?!<node>)[\w.-]+"), r"\1<node>"),  # values only, not host=$(hostname)
 ]
 
 
