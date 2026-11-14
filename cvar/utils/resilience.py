@@ -4,7 +4,7 @@ Copy to cvar/utils/resilience.py. Covers what the DSMLP docs say can end a pod:
 runtime limit (no warning), preemption (~15 min warning via /etc/podinfo files),
 eviction (SIGTERM, 600 s grace), maintenance.
 
-Usage:
+Usage (training):
     ckpt = CheckpointManager(run_dir, every_s=900, keep=2)
     guard = InterruptGuard()
     state = ckpt.load_latest()            # None on a fresh run
@@ -15,10 +15,18 @@ Usage:
         if guard.should_stop():
             ckpt.save_now(make_state(step), step)
             sys.exit(75)                  # 75 = interrupted, resumable
+
+Usage (evaluation: the episode log IS the checkpoint):
+    log = EpisodeLog(run_dir / "episodes.jsonl", key=("condition", "pair"))
+    for cond, pair in todo:
+        if (cond, pair) in log.done: continue
+        log.append({"condition": cond, "pair": pair, ...})
+        if guard.should_stop(): sys.exit(75)
 """
 from __future__ import annotations
 
 import glob
+import json
 import os
 import random
 import signal
@@ -58,11 +66,15 @@ def _load(path: str) -> Any:
 def save_atomic(obj: Any, path: str) -> None:
     """Write to path.tmp, fsync, then rename: a crash never leaves a half-written file."""
     tmp = f"{path}.tmp"
-    with open(tmp, "wb") as fh:
-        _save(obj, fh)
-        fh.flush()
-        os.fsync(fh.fileno())
-    os.replace(tmp, path)
+    try:
+        with open(tmp, "wb") as fh:
+            _save(obj, fh)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)  # the old file at `path` is untouched
+        raise
 
 
 def rng_state() -> dict:
@@ -117,6 +129,56 @@ class CheckpointManager:
             except Exception as exc:  # corrupt or partial: try the previous one
                 print(f"[resilience] could not load {path}: {exc}; trying older checkpoint")
         return None
+
+
+class EpisodeLog:
+    """Append-only JSONL of finished episodes; a resumed run skips keys already logged.
+
+    Each append writes one whole line, then flush + fsync, so a record is either fully on disk or
+    (if the pod dies mid-write) a torn last line without a newline. On open, a torn last line is
+    cut off (it is the episode that was running; it reruns), and earlier lines must all parse. A
+    key logged twice raises: the resume logic must never produce duplicates.
+    """
+
+    def __init__(self, path, key: tuple[str, ...]):
+        self.path = Path(path)
+        self.key = tuple(key)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.done: set[tuple] = set()
+        self.dropped_partial = False
+        if not self.path.exists():
+            return
+        raw = self.path.read_bytes()
+        if raw and not raw.endswith(b"\n"):
+            cut = raw.rfind(b"\n") + 1  # 0 if the only line is torn
+            with open(self.path, "r+b") as fh:
+                fh.truncate(cut)
+                fh.flush()
+                os.fsync(fh.fileno())
+            raw = raw[:cut]
+            self.dropped_partial = True
+            print(f"[resilience] {self.path}: dropped a torn last line ({len(raw)} B kept)", flush=True)
+        for n, line in enumerate(raw.decode().splitlines(), 1):
+            if not line.strip():
+                continue
+            k = self._key(json.loads(line))  # a bad complete line is real corruption: raise
+            if k in self.done:
+                raise ValueError(f"{self.path}:{n}: duplicate episode key {k}")
+            self.done.add(k)
+
+    def _key(self, rec: dict) -> tuple:
+        return tuple(rec[k] for k in self.key)
+
+    def append(self, rec: dict) -> None:
+        k = self._key(rec)
+        if k in self.done:
+            raise ValueError(f"episode {k} is already in {self.path}")
+        line = json.dumps(rec, sort_keys=True) + "\n"
+        with open(self.path, "a") as fh:
+            fh.write(line)
+            fh.flush()
+            os.fsync(fh.fileno())
+        self.done.add(k)
 
 
 # ------------------------------------------------------------------------ interruptions

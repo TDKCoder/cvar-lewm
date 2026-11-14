@@ -29,6 +29,15 @@ whether it changes anything promised in the proposal.
   closed loop, at p = 0.15 medium vs p = 0. If its success at p = 0.15 is inside the p = 0 CI, the
   noise is too weak for the planner and we switch to large. This is a GPU eval (CPU is ~24 s per plan
   call); it can ride on the block-8 smoke job. Rohan decides.
+- **Closed-loop check (approved by Rohan 2026-11-13; in the block-8 GPU job, after its timing phase).**
+  Pretrained LeWM with upstream's eval config (the job logs the exact env steps between replans);
+  50 of our seed-0 eval pairs, the same pairs and kick seeds in every condition; conditions p = 0 once,
+  and p in {0.05, 0.15} x kick size in {medium, large} (250 episodes). Reported: success with Wilson
+  CIs; the paired drop d = succ(p=0) - succ(p=0.15) per kick size with a bootstrap CI over pairs;
+  realized fired/full kick rates.
+  **Proposed rule (pending Rohan's confirmation):** choose the smallest kick size with d >= 0.10, the
+  CI of d excluding 0, and success at p = 0.15 >= 0.30 (no floor effect). If neither size
+  qualifies, report and wait.
 - **Realized kicks** (the kick-rate metric): fired 0.0488 / 0.1488 at p = 0.05 / 0.15 (within 1.1
   binomial SE); full-size 0.035 / 0.107 for medium, i.e. 72% of fired kicks land at full size, 13-14%
   are vetoed (blocked by the agent or a wall at every backoff), the rest are halved. Under the

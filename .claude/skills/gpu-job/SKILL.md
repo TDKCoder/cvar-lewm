@@ -26,8 +26,9 @@ mirror's `runs/` (via `RUNS_DIR`), so a resubmission resumes the same run direct
    - In the main loop: `ckpt.maybe_save(make_state, step)`; `if guard.should_stop(): ckpt.save_now(make_state(), step); sys.exit(75)`.
    - Saved state must include model, optimizer, scheduler, AMP scaler, step/episode counters,
      data position, and RNG states (`resilience.rng_state()` / `restore_rng_state`).
-   - Evaluation jobs: write one JSON line per finished episode to `episodes.jsonl` (append mode) and
-     on resume skip episodes already present. That *is* the checkpoint for evals.
+   - Evaluation jobs: write one JSON line per finished episode to `episodes.jsonl` with
+     `resilience.EpisodeLog` (append + fsync; on resume it skips logged keys, cuts a torn last line,
+     and refuses duplicates). That *is* the checkpoint for evals.
 3. **Smoke-test on CPU** in the worker: `scripts/remote.sh "python -m cvar.<entry> --smoke ..."`
    (tiny data, 2 episodes or 50 steps). Then kill it mid-run
    (`scripts/remote.sh "timeout -s TERM 20 python -m cvar.<entry> --smoke ..."`), rerun, and confirm
@@ -74,4 +75,5 @@ After it finishes: tell me "job <name> finished"; I'll sync.sh pull it and run /
 ## Files
 
 - `templates/job_template.sh`: job script skeleton with the JOB-META header.
-- `templates/resilience.py`: CheckpointManager, InterruptGuard, atomic save, RNG state helpers.
+- `templates/resilience.py`: CheckpointManager, InterruptGuard, EpisodeLog, atomic save, RNG state
+  helpers (tested by `tests/test_resilience.py`; keep it identical to `cvar/utils/resilience.py`).
