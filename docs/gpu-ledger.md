@@ -7,3 +7,4 @@ Weekly budget (default, confirm on the Dashboard): 10 SU per member per workspac
 
 | submitted (PT) | job | class | peak? | est_h | est_SU | pod | actual_h | actual_SU | notes |
 |---|---|---|---|---|---|---|---|---|---|
+| 2026-11-13 18:46 | smoke-eval-pusht | medium | peak | 1.0 | 1.000 | cvl-smoke-eval-pusht |  |  | Phase 0 GPU smoke: get_cost/encode/collect timings, 10-ep upstream eval, closed-loop kick check (250 ep) |
