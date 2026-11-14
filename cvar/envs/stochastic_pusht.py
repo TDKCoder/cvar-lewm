@@ -21,7 +21,12 @@ Applied only if randomize_physics:
 With p = 0 and randomize_physics off, the wrapper never touches the env: bit-for-bit upstream.
 
 RNG: seeded from np.random.SeedSequence([reset_seed, STREAM]) on every seeded reset, so the same
-(seed, actions) gives the same trajectory; an unseeded reset keeps the current stream.
+(seed, actions) gives the same trajectory; an unseeded reset keeps the current stream, unless
+seed_next_reset(s) was called, which makes the next reset behave as reset(seed=s) for both the kick
+stream and the base env (for drivers like swm.World that reset the env without a seed).
+
+Per episode (cleared on reset), for logging: episode_kicks = {n_steps, kicks_fired, kicks_full,
+kicks_partial, kicks_vetoed} and episode_actions (the actions this wrapper received, float32).
 """
 from __future__ import annotations
 
@@ -73,7 +78,9 @@ class StochasticPushT(gym.Wrapper):
         self.mass = tuple(map(float, mass))
         self.contact_friction = tuple(map(float, contact_friction))
         self._rng = np.random.default_rng(np.random.SeedSequence())
+        self._pending_seed: int | None = None
         self.physics = np.full(4, np.nan)  # [applied, c, m, mu] for the current episode
+        self._clear_episode_log()
 
     @classmethod
     def from_config(cls, env: gym.Env, cfg: dict | str | Path | None = None, **overrides: Any) -> "StochasticPushT":
@@ -92,11 +99,25 @@ class StochasticPushT(gym.Wrapper):
             contact_friction=ph.get("contact_friction", (0.0, 0.0)),
         )
 
+    def seed_next_reset(self, seed: int) -> None:
+        """Seed the kick stream at the next reset even if that reset passes no seed."""
+        self._pending_seed = int(seed)
+
+    def _clear_episode_log(self) -> None:
+        self.episode_kicks = dict(n_steps=0, kicks_fired=0, kicks_full=0, kicks_partial=0, kicks_vetoed=0)
+        self.episode_actions: list[np.ndarray] = []
+
     # ------------------------------------------------------------------ gym API
     def reset(self, *, seed: int | None = None, options: dict | None = None):
-        obs, info = self.env.reset(seed=seed, options=options)
-        if seed is not None:
-            self._rng = np.random.default_rng(np.random.SeedSequence([int(seed), STREAM]))
+        kick_seed = seed if seed is not None else self._pending_seed
+        self._pending_seed = None
+        # The pending seed seeds the base env's reset too: PushT.reset samples a random goal pose and
+        # steps physics from it before placing the start state, which leaves pymunk contact state that
+        # can change later kicks' backoff. Seeding it makes every condition of a pair reset identically.
+        obs, info = self.env.reset(seed=kick_seed, options=options)
+        if kick_seed is not None:
+            self._rng = np.random.default_rng(np.random.SeedSequence([int(kick_seed), STREAM]))
+        self._clear_episode_log()
         c = self._rng.uniform(*self.drag_rate)
         m = self._rng.uniform(*self.mass)
         mu = self._rng.uniform(*self.contact_friction)
@@ -114,6 +135,14 @@ class StochasticPushT(gym.Wrapper):
         fired = u < self.p
         scale = self._kick(theta, dist, rot) if fired else 0.0
         obs, reward, terminated, truncated, info = self.env.step(action)
+        ek = self.episode_kicks
+        ek["n_steps"] += 1
+        if fired:
+            ek["kicks_fired"] += 1
+            ek["kicks_full"] += scale == 1.0
+            ek["kicks_partial"] += 0.0 < scale < 1.0
+            ek["kicks_vetoed"] += scale == 0.0
+        self.episode_actions.append(np.asarray(action, dtype=np.float32).copy())
         info["cvl_kick"] = np.array([float(fired), u, theta, dist, rot, scale])
         info["cvl_physics"] = self.physics.copy()
         return obs, reward, terminated, truncated, info
@@ -165,9 +194,18 @@ class StochasticPushT(gym.Wrapper):
 
 
 def make_stochastic_pusht(config: dict | str | None = None, p: float | None = None,
-                          randomize_physics: bool | None = None, **env_kwargs: Any) -> gym.Env:
-    """gym entry point for `cvar/PushTStoch-v0`: swm PushT + StochasticPushT from the yaml config."""
+                          randomize_physics: bool | None = None, kick_dist_px: tuple | None = None,
+                          kick_rot_deg: float | None = None, **env_kwargs: Any) -> gym.Env:
+    """gym entry point for `cvar/PushTStoch-v0`: swm PushT + StochasticPushT from the yaml config,
+    with optional overrides of p, randomize_physics and the kick size."""
     import stable_worldmodel.envs.pusht.env as pusht  # noqa: F401  (swm registers swm/PushT-v1)
 
+    cfg = load_config(config) if not isinstance(config, dict) else dict(config)
+    if kick_dist_px is not None or kick_rot_deg is not None:
+        cfg["kick"] = dict(cfg.get("kick", {}))
+        if kick_dist_px is not None:
+            cfg["kick"]["dist_px"] = tuple(kick_dist_px)
+        if kick_rot_deg is not None:
+            cfg["kick"]["rot_deg"] = float(kick_rot_deg)
     base = pusht.PushT(**env_kwargs)
-    return StochasticPushT.from_config(base, config, p=p, randomize_physics=randomize_physics)
+    return StochasticPushT.from_config(base, cfg, p=p, randomize_physics=randomize_physics)

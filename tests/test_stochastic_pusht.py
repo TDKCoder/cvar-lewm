@@ -134,3 +134,57 @@ def test_kick_into_agent_is_scaled_back():
     toward_agent = math.atan2(*(np.array(b.agent.position) - np.array(b.block.position))[::-1])
     s = env._kick(toward_agent, 20.0, 0.0)
     assert s < 1.0, "a 20 px kick straight into the agent should be scaled back or vetoed"
+
+
+def test_seed_next_reset_equals_seeded_reset():
+    """swm.World resets without a seed; seed_next_reset must give the same kick stream and trajectory.
+    Start AND goal state are passed explicitly: reset() steps physics once from the goal pose, so a
+    random goal would perturb pymunk's contact state between the two runs."""
+    probe = StochasticPushT(pusht.PushT(), p=0.0)
+    obs, _ = probe.reset(seed=11)
+    opts = {"state": obs["state"].copy(), "goal_state": np.array(probe.unwrapped.goal_state, dtype=np.float64)}
+    acts = [near_block_actions(probe, np.random.default_rng(t)) for t in range(N_STEPS)]
+
+    def run(seeded: bool):
+        env = StochasticPushT(pusht.PushT(), p=0.15)
+        if seeded:
+            env.reset(seed=11, options=dict(opts))
+        else:
+            env.seed_next_reset(11)
+            env.reset(seed=None, options=dict(opts))
+        ks, ss = [], []
+        for a in acts:
+            o, _, _, _, info = env.step(a)
+            ks.append(info["cvl_kick"]); ss.append(o["state"].copy())
+        return env, np.array(ks), np.array(ss)
+
+    _, k_a, s_a = run(True)
+    env, k_b, s_b = run(False)
+    assert np.array_equal(k_a, k_b) and np.array_equal(s_a, s_b)
+    assert k_a[:, 0].sum() > 0
+    env.reset()  # the pending seed is used once
+    assert env._pending_seed is None
+
+
+def test_episode_counters_match_info():
+    env = StochasticPushT(pusht.PushT(), p=0.3)
+    r = rollout(env, 4, action_seed=1)
+    k = r["kick"]
+    ek = env.episode_kicks
+    assert ek["n_steps"] == N_STEPS
+    assert ek["kicks_fired"] == int(k[:, 0].sum()) > 0
+    assert ek["kicks_full"] == int(((k[:, 0] == 1) & (k[:, 5] == 1.0)).sum())
+    assert ek["kicks_fired"] == ek["kicks_full"] + ek["kicks_partial"] + ek["kicks_vetoed"]
+    assert np.array_equal(np.array(env.episode_actions), r["actions"].astype(np.float32))
+    env.reset(seed=0)
+    assert env.episode_kicks["n_steps"] == 0 and env.episode_actions == []
+
+
+def test_factory_kick_size_override():
+    from cvar.envs.stochastic_pusht import make_stochastic_pusht
+
+    env = make_stochastic_pusht(p=0.15, kick_dist_px=(10.0, 40.0), kick_rot_deg=20.0)
+    assert env.p == 0.15 and env.kick_dist_px == (10.0, 40.0)
+    assert math.isclose(env.kick_rot, math.radians(20.0))
+    default = make_stochastic_pusht()
+    assert default.kick_dist_px == tuple(load_config()["kick"]["dist_px"]) and default.p == 0.0

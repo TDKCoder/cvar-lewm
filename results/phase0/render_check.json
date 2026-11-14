@@ -1,0 +1,43 @@
+{
+ "n_frames": 6812,
+ "frame_shape": [
+  224,
+  224,
+  3
+ ],
+ "set_state": {
+  "exact_frac": 0.0,
+  "mean_abs_median": 0.4609208917942177,
+  "mean_abs_max": 0.8122076955782312,
+  "diff_pixel_frac_median": 0.1497528698979592,
+  "diff_pixel_frac_p99": 0.18592334980867348
+ },
+ "pose_only": {
+  "exact_frac": 0.0,
+  "mean_abs_median": 0.44767086522108845,
+  "mean_abs_max": 5.2954201211734695,
+  "diff_pixel_frac_median": 0.1498126594387755,
+  "diff_pixel_frac_p99": 0.18628208705357144
+ },
+ "latent_sq_dist": {
+  "n": 256,
+  "data_step_t_t1": {
+   "median": 1.3685106039047241,
+   "p10": 0.13864511251449585
+  },
+  "set_state": {
+   "median": 0.3841431736946106,
+   "p90": 1.003807544708252,
+   "max": 3.588710069656372,
+   "median_ratio_to_step": 0.2945426106452942
+  },
+  "pose_only": {
+   "median": 0.4816427230834961,
+   "p90": 1.4092891216278076,
+   "max": 210.37071228027344,
+   "median_ratio_to_step": 0.3719210922718048
+  },
+  "start_goal_median": 331.721435546875
+ },
+ "elapsed_s": 84.5
+}

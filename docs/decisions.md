@@ -3,6 +3,46 @@
 Newest on top. Format: `## YYYY-MM-DD: <choice>` then context, options considered, why, and
 whether it changes anything promised in the proposal.
 
+## 2026-11-13: Block-8 GPU smoke job: closed-loop eval design, deviations from eval.py, measured checks
+
+- **Job** `jobs/queue/smoke-eval-pusht.sh`, three resumable phases in this order (a failed phase
+  doesn't stop the next; an interrupt exits 75): (1) timing (`cvar/eval/gpu_timing.py`), (2) the
+  10-episode upstream eval, (3) the closed-loop kick check (`cvar/eval/closed_loop.py`, 250
+  episodes, then `drift.json`). Analysis: `cvar/eval/kick_check_report.py` (Wilson CIs, paired drop,
+  the rule) and report-results per phase.
+- **Kept from eval.py:** each episode is run by upstream's own `World._evaluate_from_dataset`
+  (callables, start/goal injection, goal frame re-injected each step, success = `terminated` at any
+  step, 50-step budget), `WorldModelPolicy`, CEM and plan settings read from `config/eval/`, expert
+  scaler stats, eval.py's image transform, `interpolate_pos_encoding = True`.
+- **Replanning, measured:** the policy replans only when its action buffer is empty, so with horizon 5 =
+  receding horizon 5 blocks x action_block 5 it **replans every 25 env steps**: at most 2 plan calls
+  per 50-step episode, and warm start never applies (nothing is left over). Every episode logs
+  `replan_env_steps` / `env_steps_between_replans` (CPU smoke: [25] in every episode).
+- **Deviations** (all identical across conditions, so none biases a paired comparison):
+  1. one env per episode instead of 50 envs in one batch (resumable, per-pair seeds; CEM plans
+     each env separately anyway);
+  2. CEM noise from `CRNCEMSolver`, reseeded per (pair, plan call) (entry above);
+  3. kick check only: our seed-0 pairs have no stored frames, so the start and goal frames are
+     rendered from the stored state with `_set_state` (`cvar/data/render_check.py`,
+     `results/phase0/render_check.json`): over the 6,812 kept dataset frames no render is
+     pixel-identical (median mean |diff| 0.46 / 255, ~15% of pixels differ), but in the encoder's
+     latent space the median squared distance to the dataset frame is 0.38, which is 0.29 of one env
+     step's latent change (median 1.37) and ~0.1% of the median start-goal distance (332). The
+     upstream phase uses the dataset's own frames;
+  4. the base env's reset is seeded with the pair's kick seed (`seed_next_reset`): upstream resets it
+     unseeded, which only randomizes a goal pose that `_set_goal_state` overwrites, but steps physics
+     from it, leaving pymunk contact state that changed a kick's backoff in a test.
+- **CRN verified on CPU** (`tests/test_closed_loop.py`, smoke `drift.json`): same pair + seeds give
+  identical actions on two runs; the first plan's 25 actions are identical across all 5 conditions.
+- **SIGTERM path fixed and tested.** bash doesn't forward SIGTERM to a foreground child, so the job
+  runs each phase in the background, forwards TERM, waits for the real exit code, and maps 75/143 to
+  "interrupted". Its log `tee` ignores TERM: in the first resume test a group-wide TERM killed tee,
+  python's handler died on the broken pipe and the phase exited 1. Retested with TERM to the job
+  script only (eviction-like) and to the whole process group: both stop between episodes, exit 75,
+  and the rerun completes the remaining episodes with no duplicates. Ported to the gpu-job template.
+- **Aggregation:** report-results now has a `kick` cell field; aggregate each phase separately (the
+  upstream and kick-check p = 0 cells use different pair sets and the duplicate guard refuses to pool them).
+
 ## 2026-11-13: Kick ranges: keep "medium" (5-20 px, +-10 deg), chosen from the block-6 spread study
 
 - **Study** (`cvar/envs/spread_study.py`, figures and table in `results/phase0/spread/`): for each of
@@ -35,9 +75,13 @@ whether it changes anything promised in the proposal.
   and p in {0.05, 0.15} x kick size in {medium, large} (250 episodes). Reported: success with Wilson
   CIs; the paired drop d = succ(p=0) - succ(p=0.15) per kick size with a bootstrap CI over pairs;
   realized fired/full kick rates.
-  **Proposed rule (pending Rohan's confirmation):** choose the smallest kick size with d >= 0.10, the
+  **Rule (confirmed by Rohan 2026-11-13):** choose the smallest kick size with d >= 0.10, the
   CI of d excluding 0, and success at p = 0.15 >= 0.30 (no floor effect). If neither size
   qualifies, report and wait.
+  **Common random numbers for the planner too (Rohan, 2026-11-13):** the CEM sampler is reseeded per
+  (pair, plan-call index) from a fixed base seed, identically in every condition, so d measures the
+  kicks and not CEM sampling noise. Seeds are logged. A CPU test checks that the same pair and seeds
+  give identical actions on two runs; on GPU any drift is reported, not failed on.
 - **Realized kicks** (the kick-rate metric): fired 0.0488 / 0.1488 at p = 0.05 / 0.15 (within 1.1
   binomial SE); full-size 0.035 / 0.107 for medium, i.e. 72% of fired kicks land at full size, 13-14%
   are vetoed (blocked by the agent or a wall at every backoff), the rest are halved. Under the

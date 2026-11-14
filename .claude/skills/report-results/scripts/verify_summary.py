@@ -24,7 +24,7 @@ import math
 import os
 import sys
 
-CELL = ["env", "p", "head", "cost", "alpha", "beta", "S", "n_euler"]
+CELL = ["env", "p", "kick", "head", "cost", "alpha", "beta", "S", "n_euler"]
 
 
 def canon(v):

@@ -37,7 +37,7 @@ from collections import defaultdict
 import numpy as np
 
 REQUIRED = ["env", "p", "head", "cost", "seed", "episode", "success", "final_cost"]
-CELL_FIELDS = ["env", "p", "head", "cost", "alpha", "beta", "S", "n_euler"]
+CELL_FIELDS = ["env", "p", "kick", "head", "cost", "alpha", "beta", "S", "n_euler"]  # kick: PushT kick size (None = n/a)
 KICK_KEYS = ["n_steps", "kicks_fired", "kicks_full"]  # required for env == "pusht"
 
 

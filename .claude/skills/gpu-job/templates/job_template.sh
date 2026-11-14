@@ -38,11 +38,24 @@ NVSMI="$(command -v nvidia-smi || echo /usr/local/nvidia/bin/nvidia-smi)"
 # Refuse to burn GPU time if CUDA isn't visible.
 python -c 'import torch; assert torch.cuda.is_available(), "CUDA not available in this pod"'
 
+# bash does not pass SIGTERM (eviction) to a foreground child: run python in the background, forward
+# TERM to it, and wait for its real exit code. tee ignores TERM so the log pipe survives a group-wide
+# TERM (otherwise python dies on a broken pipe with exit 1). Tested in jobs/queue/smoke-eval-pusht.sh.
+child=""
+trap 'echo "=== $(date -Is) SIGTERM: forwarding to pid ${child:-none}" >> "$RUN_DIR/env.txt"; [ -n "$child" ] && kill -TERM "$child" 2>/dev/null || true' TERM
+
 # Main command. --resume auto must make a rerun continue where it stopped.
+set +e
 python -u -m cvar.REPLACE_ENTRYPOINT \
   --run-dir "$RUN_DIR" \
   --resume auto \
   REPLACE_ARGS \
-  2>&1 | tee -a "$RUN_DIR/log.txt"
+  > >(trap '' TERM; exec tee -a "$RUN_DIR/log.txt") 2>&1 &
+child=$!
+wait "$child"; rc=$?
+while kill -0 "$child" 2>/dev/null; do wait "$child"; rc=$?; done
+set -e
 
-echo "=== $(date -Is) done" >> "$RUN_DIR/env.txt"
+echo "=== $(date -Is) done, exit $rc" >> "$RUN_DIR/env.txt"
+[ "$rc" = 143 ] && rc=75   # killed by TERM before its handler ran: still resumable
+exit "$rc"
