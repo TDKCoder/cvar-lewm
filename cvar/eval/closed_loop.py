@@ -73,11 +73,14 @@ class Pair:
     frame_source: str
 
 
-def load_pairs(set_name: str, n: int, frames: str) -> list[Pair]:
+def load_pairs(set_name: str, n: int, frames: str, offset: int = 0) -> list[Pair]:
+    """Pairs [offset, offset + n) of an eval set; Pair.idx is the index in the whole set."""
     ev = np.load(store() / "expert_eval_states.npz")
-    rows_init, rows_goal = ev[f"{set_name}_row_init"][:n], ev[f"{set_name}_row_goal"][:n]
-    init = {c: ev[f"{set_name}_init_{c}"][:n] for c in COLS}
-    goal = {c: ev[f"{set_name}_goal_{c}"][:n] for c in COLS}
+    sl = slice(offset, offset + n)
+    rows_init, rows_goal = ev[f"{set_name}_row_init"][sl], ev[f"{set_name}_row_goal"][sl]
+    assert len(rows_init) == n, f"{set_name} has only {len(ev[f'{set_name}_row_init'])} pairs"
+    init = {c: ev[f"{set_name}_init_{c}"][sl] for c in COLS}
+    goal = {c: ev[f"{set_name}_goal_{c}"][sl] for c in COLS}
     if frames == "dataset":
         z = np.load(store() / "expert_columns.npz")
         pos = {int(r): i for i, r in enumerate(z["eval_episode_rows"])}
@@ -89,7 +92,7 @@ def load_pairs(set_name: str, n: int, frames: str) -> list[Pair]:
         from cvar.data.render_check import render_states
         both = render_states(np.concatenate([init["state"], goal["state"]]), "set_state")
         fr = [np.stack([both[i], both[len(rows_init) + i]]) for i in range(len(rows_init))]
-    return [Pair(set_name, i, int(rows_init[i]), int(init["episode_idx"][i]), int(init["step_idx"][i]),
+    return [Pair(set_name, offset + i, int(rows_init[i]), int(init["episode_idx"][i]), int(init["step_idx"][i]),
                  {c: init[c][i] for c in COLS}, {c: goal[c][i] for c in COLS}, fr[i], frames)
             for i in range(len(rows_init))]
 
@@ -269,6 +272,7 @@ def main(argv=None) -> int:
     ap.add_argument("--phase", choices=["upstream", "kickcheck"], required=True)
     ap.add_argument("--run-dir", required=True)
     ap.add_argument("--pairs", type=int, default=None, help="default 10 (upstream) / 50 (kickcheck)")
+    ap.add_argument("--pair-offset", type=int, default=0, help="run pairs [offset, offset + pairs) of the set")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     ap.add_argument("--base-seed", type=int, default=0)
     ap.add_argument("--resume", default="auto", choices=["auto"], help="always resumes from episodes.jsonl")
@@ -284,11 +288,11 @@ def main(argv=None) -> int:
     guard = InterruptGuard()
 
     if args.phase == "upstream":
-        pairs, conds = load_pairs("upstream", n, "dataset"), [("p0", 0.0, None)]
+        pairs, conds = load_pairs("upstream", n, "dataset", args.pair_offset), [("p0", 0.0, None)]
     else:
-        pairs, conds = load_pairs("ours", n, "render"), KICKCHECK_CONDITIONS
+        pairs, conds = load_pairs("ours", n, "render", args.pair_offset), KICKCHECK_CONDITIONS
     todo = [(pr, c) for pr in pairs for c in conds if (c[0], pr.idx) not in log.done]
-    print(f"[{args.phase}] {len(pairs)} pairs x {len(conds)} conditions; {len(todo)} episodes to run "
+    print(f"[{args.phase}] {len(pairs)} pairs (from {args.pair_offset}) x {len(conds)} conditions; {len(todo)} episodes to run "
           f"({len(log.done)} already logged); device {args.device}; cem {ecfg['cem']}", flush=True)
     model, solver, policy = build_policy(args.device, ecfg, args.base_seed)
     worlds = {}

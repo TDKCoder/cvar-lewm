@@ -29,6 +29,10 @@ mkdir -p "$RUN_DIR"
 NVSMI="$(command -v nvidia-smi || echo /usr/local/nvidia/bin/nvidia-smi)"
 {
   echo "=== $(date -Is) start on $(hostname)"
+  # Signal path (decision 2026-11-13): an eviction's SIGTERM goes to PID 1 (tini), which signals its
+  # child; the job script must be that child (pid 1's child, ppid 1) for its TERM trap to run.
+  echo "pid1: $(tr '\0' ' ' < /proc/1/cmdline 2>/dev/null || echo unreadable)"
+  echo "self: pid=$$ ppid=$PPID pgid=$(awk '{print $5}' /proc/$$/stat) sid=$(awk '{print $6}' /proc/$$/stat)"
   echo "venv: ensure_venv.sh took ${venv_s}s ($(cat "$VENV_DIR/.cvl-stamp"))"
   "$NVSMI" || true
   echo "git: $(git rev-parse HEAD) dirty=$(git status --porcelain | wc -l)"

@@ -61,16 +61,14 @@ smoke job, decided by the confirmed rule (decisions.md, "Kick ranges").
 1. GPU smoke job results -> kick size by the rule; SU estimate for the spec section-7 grid from the
    get_cost timings; GPU vs CPU collect+encode for the 3 main-grid conditions (Rohan picks).
 2. `~/private` quota (Rohan) -> whether the two `randomize_physics` conditions get data.
-3. **Eviction test, before the first multi-hour GPU job.** Submit a short copy of the smoke job
-   (kick-check phase only, own RUN_ID, ~0.1-0.2 SU). Once the kick check has logged a few episodes
-   (I watch the mirror's `runs/<RUN_ID>/kickcheck/episodes.jsonl` from the worker), Rohan deletes the pod
-   (`kubectl delete pod cvl-<name>`, his terminal). Pass if: env.txt shows `SIGTERM: forwarding`,
-   `phase kickcheck exit 75` and "interrupted"; log.txt shows `[resilience] SIGTERM received` and
-   "stopping between episodes"; after resubmitting, the phase logs "N already logged", runs only the
-   rest, and report-results' duplicate check passes. Note: `kubectl delete pod` gives the default
-   grace period (30 s unless the pod spec sets more), so a phase must stop within 30 s; one GPU
-   episode (<= 2 plan calls) should fit, but the test checks it.
-4. Commit the job move / ledger line that submit_job.sh left in the working tree.
+3. **Eviction test, before the first multi-hour GPU job:** `jobs/queue/evict-test-eval-pusht.sh`
+   (queue this weekend; the week's SU expire Monday 00:00 Pacific). Kick check on our pairs 50-99 (extra
+   paired data), own RUN_ID. Once >= 10 episodes are logged, Rohan deletes the pod; pass criteria and
+   the resubmit step are in the job header. `kubectl delete pod` gives the default grace period
+   (30 s unless the pod spec sets more), so the phase must stop within it; one GPU episode
+   (<= 2 plan calls) should fit, and the test checks it. Every GPU job now writes PID 1's command
+   line and its own pid / ppid / pgid / sid to env.txt (gpu-job template).
+4. ~~Commit the job move / ledger line~~ done (`c0b0463`); from now on after every submission.
 
 **Next:** week B: collect + encode the 3 main-grid conditions (chunked, resumable,
 `snapshot_run.sh`), then train the deterministic, mixture and flow heads.
