@@ -3,6 +3,21 @@
 Newest on top. Format: `## YYYY-MM-DD: <choice>` then context, options considered, why, and
 whether it changes anything promised in the proposal.
 
+## 2026-11-13: GPU pod command execs the job script (Rohan's change to the submit script)
+
+- The batch pod's command is now `bash -c "mkdir -p <root>/jobs/logs && exec bash <job> > <log> 2>&1"`
+  (before: no `exec`). Without `exec`, a SIGTERM that reaches only the outer bash (an eviction signals
+  the container's main process) kills it and the job script never sees it; with `exec` the job
+  script *is* that process, so its trap forwards TERM to the running phase (entry below), which
+  stops between episodes and exits 75.
+- Signal path checked (2026-11-13, running pod `cvl-smoke-eval-pusht` + the worker's identical image):
+  PID 1 is `tini -- initenv-createhomedir.sh bash -c "... && exec bash <job> ..."`. tini forwards
+  TERM to its child; `initenv-createhomedir.sh` ends in `exec "$@"` and `bash -c` ends in `exec`, so
+  that child is the job script itself.
+- Not yet tested on a real pod: before the first multi-hour GPU job, run an eviction test (delete the
+  pod mid-run; expect `exit 75` / "interrupted" in env.txt and log.txt, and a clean resume with no
+  duplicate episodes on resubmit). Plan in `docs/EXPERIMENTS.md` (Phase 0, open items).
+
 ## 2026-11-13: Block-8 GPU smoke job: closed-loop eval design, deviations from eval.py, measured checks
 
 - **Job** `jobs/queue/smoke-eval-pusht.sh`, three resumable phases in this order (a failed phase

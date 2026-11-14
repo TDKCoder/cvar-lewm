@@ -57,7 +57,7 @@ POD_LOG="$POD_ROOT/jobs/logs/$NAME.out"
 ARGS=(-g 1 -l "gpu-class=$CLASS" -c "${GPU_CPU:-4}" -m "${GPU_MEM_GB:-16}" -N "$POD_NAME" -B)
 [ -n "${IMAGE:-}" ] && ARGS=(-i "$IMAGE" "${ARGS[@]}")
 [ -n "${WS:-}" ] && ARGS=(-W "$WS" "${ARGS[@]}")
-POD_CMD="mkdir -p $POD_ROOT/jobs/logs && bash $POD_JOB > $POD_LOG 2>&1"
+POD_CMD="mkdir -p $POD_ROOT/jobs/logs && exec bash $POD_JOB > $POD_LOG 2>&1"
 
 cat <<EOF
 Job:        $JOB_REL
