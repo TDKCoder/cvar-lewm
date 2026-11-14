@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# JOB-META class=medium est_hours=0.6 desc="Phase 0 GPU smoke: get_cost/encode/collect timings, 10-ep upstream eval, closed-loop kick check (250 ep)"
+# JOB-META class=medium est_hours=1.0 desc="Phase 0 GPU smoke: get_cost/encode/collect timings, 10-ep upstream eval, closed-loop kick check (250 ep)"
 #
 # Prepared by Claude Code on 2026-11-13; code at commit 27e799e (this script is committed right after).
 # CPU smoke test:  SMOKE=1 bash jobs/queue/smoke-eval-pusht.sh   (worker pod, CEM 30x3, 2 pairs)
@@ -34,7 +34,8 @@
 #   env stepping + 224 px render: 261 x 50 steps / ~400 steps/s = 0.5 min; 3 model loads ~1 min
 #   phase 1 (timing): ~2 min;  venv cold build in the fresh pod: ~2.5 min (measured 143-146 s)
 #   pod start / image pull: ~2 min (unmeasured allowance)
-#   total ~25.4 min x 1.25 buffer = 31.8 min ~ 0.53 h -> est_hours 0.6
+#   total ~25.4 min x 1.25 buffer = 31.8 min ~ 0.53 h expected (est_hours 1.0 in JOB-META: headroom
+#   for slower medium hardware; billing is for time used)
 #   => ~0.6 SU peak / ~0.3 SU off-peak. If plans take 1 s: ~0.4 h -> 0.4 / 0.2 SU.
 #
 # Rohan submits it from the laptop with: scripts/submit_job.sh jobs/queue/smoke-eval-pusht.sh
