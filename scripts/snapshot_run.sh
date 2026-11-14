@@ -8,7 +8,8 @@
 # The snapshot is /tmp/cvl-snap/<name>-<YYYYmmdd-HHMMSS>/ (the mirror minus runs/ and caches, ~7 MB),
 # with SNAPSHOT.txt (source, git SHA, dirty-file count, command). The command runs there through
 # scripts/withvenv.sh, with PYTHONPATH = the snapshot only. Outputs still go to $RUNS_DIR (the
-# mirror's runs/), which env.sh sets independently of the code location.
+# mirror's runs/), which env.sh sets independently of the code location; the snapshot's runs/ is a
+# symlink to it, so a relative `--out runs/x` works too.
 set -euo pipefail
 [ $# -ge 2 ] || { echo "usage: snapshot_run.sh <name> <command...>" >&2; exit 2; }
 NAME="$1"; shift
@@ -18,6 +19,8 @@ SNAP="/tmp/cvl-snap/$NAME-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$SNAP"
 tar -C "$SRC" --exclude=./runs --exclude=./jobs/logs --exclude='__pycache__' --exclude='.ipynb_checkpoints' \
   -cf - . | tar -C "$SNAP" -xf -
+mkdir -p "$SRC/runs"
+ln -s "$SRC/runs" "$SNAP/runs"   # relative `runs/...` outputs land in the mirror's runs/ (= $RUNS_DIR), not the snapshot
 
 {
   echo "snapshot: $SNAP"
