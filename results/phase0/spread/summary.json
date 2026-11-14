@@ -1,0 +1,458 @@
+{
+ "meta": {
+  "n_plans": 50,
+  "seeds": 32,
+  "kick_configs": {
+   "small": [
+    [
+     2.0,
+     10.0
+    ],
+    5.0
+   ],
+   "medium": [
+    [
+     5.0,
+     20.0
+    ],
+    10.0
+   ],
+   "large": [
+    [
+     10.0,
+     40.0
+    ],
+    20.0
+   ]
+  },
+  "cells": [
+   [
+    "small",
+    false,
+    0.0
+   ],
+   [
+    "small",
+    false,
+    0.05
+   ],
+   [
+    "small",
+    false,
+    0.15
+   ],
+   [
+    "medium",
+    false,
+    0.0
+   ],
+   [
+    "medium",
+    false,
+    0.05
+   ],
+   [
+    "medium",
+    false,
+    0.15
+   ],
+   [
+    "large",
+    false,
+    0.0
+   ],
+   [
+    "large",
+    false,
+    0.05
+   ],
+   [
+    "large",
+    false,
+    0.15
+   ],
+   [
+    "medium",
+    true,
+    0.0
+   ],
+   [
+    "medium",
+    true,
+    0.15
+   ]
+  ],
+  "physics": {
+   "drag_rate": [
+    10.0,
+    50.0
+   ],
+   "mass": [
+    0.5,
+    2.0
+   ],
+   "contact_friction": [
+    0.0,
+    0.0
+   ]
+  },
+  "backoff_halvings": 3,
+  "goal_offset": 25,
+  "elapsed_s": 160.0,
+  "smoke": false
+ },
+ "cells": [
+  {
+   "config": "small",
+   "physics": false,
+   "p": 0.0,
+   "n_rollouts": 1600,
+   "n_plans": 50,
+   "success_any": 1.0,
+   "success_any_ci": [
+    1.0,
+    1.0
+   ],
+   "success_final": 1.0,
+   "block_pos_err_median": 0.4940255531351242,
+   "block_pos_err_p90": 1.6321740562743223,
+   "block_ang_err_median_deg": 0.2640163235017213,
+   "n_steps": 40000,
+   "kicks_fired": 0,
+   "kicks_full": 0,
+   "kicks_partial": 0,
+   "kicks_vetoed": 0,
+   "fired_rate": 0.0,
+   "fired_rate_ci": [
+    0.0,
+    0.0
+   ],
+   "full_rate": 0.0,
+   "full_rate_ci": [
+    0.0,
+    0.0
+   ],
+   "replay_block_err_max_median": 0.6335535336129191
+  },
+  {
+   "config": "small",
+   "physics": false,
+   "p": 0.05,
+   "n_rollouts": 1600,
+   "n_plans": 50,
+   "success_any": 0.97375,
+   "success_any_ci": [
+    0.96125,
+    0.985625
+   ],
+   "success_final": 0.9725,
+   "block_pos_err_median": 2.9884158030706525,
+   "block_pos_err_p90": 11.135040630762393,
+   "block_ang_err_median_deg": 1.186512949239851,
+   "n_steps": 40000,
+   "kicks_fired": 1952,
+   "kicks_full": 1476,
+   "kicks_partial": 337,
+   "kicks_vetoed": 139,
+   "fired_rate": 0.0488,
+   "fired_rate_ci": [
+    0.046725,
+    0.050800624999999995
+   ],
+   "full_rate": 0.0369,
+   "full_rate_ci": [
+    0.035125,
+    0.038775
+   ],
+   "replay_block_err_max_median": 4.673117979385005
+  },
+  {
+   "config": "small",
+   "physics": false,
+   "p": 0.15,
+   "n_rollouts": 1600,
+   "n_plans": 50,
+   "success_any": 0.904375,
+   "success_any_ci": [
+    0.878125,
+    0.93
+   ],
+   "success_final": 0.893125,
+   "block_pos_err_median": 7.788139675836951,
+   "block_pos_err_p90": 20.60552083950478,
+   "block_ang_err_median_deg": 3.195744438048313,
+   "n_steps": 40000,
+   "kicks_fired": 5952,
+   "kicks_full": 4462,
+   "kicks_partial": 1005,
+   "kicks_vetoed": 485,
+   "fired_rate": 0.1488,
+   "fired_rate_ci": [
+    0.14539875,
+    0.15212562500000001
+   ],
+   "full_rate": 0.11155,
+   "full_rate_ci": [
+    0.1084,
+    0.114675
+   ],
+   "replay_block_err_max_median": 10.311280213547171
+  },
+  {
+   "config": "medium",
+   "physics": false,
+   "p": 0.0,
+   "n_rollouts": 1600,
+   "n_plans": 50,
+   "success_any": 1.0,
+   "success_any_ci": [
+    1.0,
+    1.0
+   ],
+   "success_final": 1.0,
+   "block_pos_err_median": 0.4940255531351242,
+   "block_pos_err_p90": 1.6321740562743223,
+   "block_ang_err_median_deg": 0.2640163235017213,
+   "n_steps": 40000,
+   "kicks_fired": 0,
+   "kicks_full": 0,
+   "kicks_partial": 0,
+   "kicks_vetoed": 0,
+   "fired_rate": 0.0,
+   "fired_rate_ci": [
+    0.0,
+    0.0
+   ],
+   "full_rate": 0.0,
+   "full_rate_ci": [
+    0.0,
+    0.0
+   ],
+   "replay_block_err_max_median": 0.6335535336129191
+  },
+  {
+   "config": "medium",
+   "physics": false,
+   "p": 0.05,
+   "n_rollouts": 1600,
+   "n_plans": 50,
+   "success_any": 0.854375,
+   "success_any_ci": [
+    0.825,
+    0.88375
+   ],
+   "success_final": 0.841875,
+   "block_pos_err_median": 6.051414551473769,
+   "block_pos_err_p90": 26.543874907813585,
+   "block_ang_err_median_deg": 1.8512016149191894,
+   "n_steps": 40000,
+   "kicks_fired": 1952,
+   "kicks_full": 1409,
+   "kicks_partial": 283,
+   "kicks_vetoed": 260,
+   "fired_rate": 0.0488,
+   "fired_rate_ci": [
+    0.04665,
+    0.050875
+   ],
+   "full_rate": 0.035225,
+   "full_rate_ci": [
+    0.033324375,
+    0.037101249999999995
+   ],
+   "replay_block_err_max_median": 9.303461936463325
+  },
+  {
+   "config": "medium",
+   "physics": false,
+   "p": 0.15,
+   "n_rollouts": 1600,
+   "n_plans": 50,
+   "success_any": 0.60375,
+   "success_any_ci": [
+    0.558734375,
+    0.643765625
+   ],
+   "success_final": 0.563125,
+   "block_pos_err_median": 16.80455414025343,
+   "block_pos_err_p90": 51.75222426524001,
+   "block_ang_err_median_deg": 7.067395997877935,
+   "n_steps": 40000,
+   "kicks_fired": 5952,
+   "kicks_full": 4288,
+   "kicks_partial": 845,
+   "kicks_vetoed": 819,
+   "fired_rate": 0.1488,
+   "fired_rate_ci": [
+    0.145475,
+    0.15225
+   ],
+   "full_rate": 0.1072,
+   "full_rate_ci": [
+    0.10404875000000001,
+    0.110350625
+   ],
+   "replay_block_err_max_median": 21.294533584017692
+  },
+  {
+   "config": "large",
+   "physics": false,
+   "p": 0.0,
+   "n_rollouts": 1600,
+   "n_plans": 50,
+   "success_any": 1.0,
+   "success_any_ci": [
+    1.0,
+    1.0
+   ],
+   "success_final": 1.0,
+   "block_pos_err_median": 0.4940255531351242,
+   "block_pos_err_p90": 1.6321740562743223,
+   "block_ang_err_median_deg": 0.2640163235017213,
+   "n_steps": 40000,
+   "kicks_fired": 0,
+   "kicks_full": 0,
+   "kicks_partial": 0,
+   "kicks_vetoed": 0,
+   "fired_rate": 0.0,
+   "fired_rate_ci": [
+    0.0,
+    0.0
+   ],
+   "full_rate": 0.0,
+   "full_rate_ci": [
+    0.0,
+    0.0
+   ],
+   "replay_block_err_max_median": 0.6335535336129191
+  },
+  {
+   "config": "large",
+   "physics": false,
+   "p": 0.05,
+   "n_rollouts": 1600,
+   "n_plans": 50,
+   "success_any": 0.620625,
+   "success_any_ci": [
+    0.5868593750000001,
+    0.655625
+   ],
+   "success_final": 0.591875,
+   "block_pos_err_median": 12.370360099648943,
+   "block_pos_err_p90": 58.356706693092285,
+   "block_ang_err_median_deg": 3.6555313739162454,
+   "n_steps": 40000,
+   "kicks_fired": 1952,
+   "kicks_full": 1388,
+   "kicks_partial": 248,
+   "kicks_vetoed": 316,
+   "fired_rate": 0.0488,
+   "fired_rate_ci": [
+    0.046674375000000004,
+    0.0509
+   ],
+   "full_rate": 0.0347,
+   "full_rate_ci": [
+    0.033024375,
+    0.03655
+   ],
+   "replay_block_err_max_median": 18.30721524600796
+  },
+  {
+   "config": "large",
+   "physics": false,
+   "p": 0.15,
+   "n_rollouts": 1600,
+   "n_plans": 50,
+   "success_any": 0.28875,
+   "success_any_ci": [
+    0.253125,
+    0.3250156249999999
+   ],
+   "success_final": 0.250625,
+   "block_pos_err_median": 37.06108745666273,
+   "block_pos_err_p90": 92.6805166541849,
+   "block_ang_err_median_deg": 14.447618841544287,
+   "n_steps": 40000,
+   "kicks_fired": 5952,
+   "kicks_full": 4224,
+   "kicks_partial": 799,
+   "kicks_vetoed": 929,
+   "fired_rate": 0.1488,
+   "fired_rate_ci": [
+    0.145525,
+    0.152125
+   ],
+   "full_rate": 0.1056,
+   "full_rate_ci": [
+    0.102449375,
+    0.108775
+   ],
+   "replay_block_err_max_median": 43.96761791029102
+  },
+  {
+   "config": "medium",
+   "physics": true,
+   "p": 0.0,
+   "n_rollouts": 1600,
+   "n_plans": 50,
+   "success_any": 0.93375,
+   "success_any_ci": [
+    0.889984375,
+    0.9725
+   ],
+   "success_final": 0.931875,
+   "block_pos_err_median": 3.16691373157127,
+   "block_pos_err_p90": 14.873426995880164,
+   "block_ang_err_median_deg": 2.5754812628964427,
+   "n_steps": 40000,
+   "kicks_fired": 0,
+   "kicks_full": 0,
+   "kicks_partial": 0,
+   "kicks_vetoed": 0,
+   "fired_rate": 0.0,
+   "fired_rate_ci": [
+    0.0,
+    0.0
+   ],
+   "full_rate": 0.0,
+   "full_rate_ci": [
+    0.0,
+    0.0
+   ],
+   "replay_block_err_max_median": 3.508982257179469
+  },
+  {
+   "config": "medium",
+   "physics": true,
+   "p": 0.15,
+   "n_rollouts": 1600,
+   "n_plans": 50,
+   "success_any": 0.56625,
+   "success_any_ci": [
+    0.52,
+    0.613140625
+   ],
+   "success_final": 0.5225,
+   "block_pos_err_median": 18.06528830269165,
+   "block_pos_err_p90": 53.566260235386,
+   "block_ang_err_median_deg": 8.497136466326682,
+   "n_steps": 40000,
+   "kicks_fired": 5952,
+   "kicks_full": 4306,
+   "kicks_partial": 872,
+   "kicks_vetoed": 774,
+   "fired_rate": 0.1488,
+   "fired_rate_ci": [
+    0.145324375,
+    0.152225
+   ],
+   "full_rate": 0.10765,
+   "full_rate_ci": [
+    0.104375,
+    0.110875
+   ],
+   "replay_block_err_max_median": 22.32829523063866
+  }
+ ]
+}

@@ -1,0 +1,121 @@
+{
+ "source": "quentinll/lewm-pusht (dataset) pusht_expert_train.h5.zst",
+ "n_rows": 2336736,
+ "n_episodes": 18685,
+ "schema": {
+  "action": {
+   "shape": [
+    2336736,
+    2
+   ],
+   "dtype": "float32"
+  },
+  "ep_len": {
+   "shape": [
+    18685
+   ],
+   "dtype": "int32"
+  },
+  "ep_offset": {
+   "shape": [
+    18685
+   ],
+   "dtype": "int64"
+  },
+  "episode_idx": {
+   "shape": [
+    2336736
+   ],
+   "dtype": "int64"
+  },
+  "pixels": {
+   "shape": [
+    2336736,
+    224,
+    224,
+    3
+   ],
+   "dtype": "uint8"
+  },
+  "proprio": {
+   "shape": [
+    2336736,
+    4
+   ],
+   "dtype": "float32"
+  },
+  "state": {
+   "shape": [
+    2336736,
+    7
+   ],
+   "dtype": "float32"
+  },
+  "step_idx": {
+   "shape": [
+    2336736
+   ],
+   "dtype": "int64"
+  }
+ },
+ "kept": [
+  "action",
+  "ep_len",
+  "ep_offset",
+  "episode_idx",
+  "proprio",
+  "state",
+  "step_idx"
+ ],
+ "excluded_from_sets": [
+  "ours",
+  "upstream"
+ ],
+ "pixel_set": "upstream",
+ "goal_offset": 25,
+ "attrs": {},
+ "n_excluded_episodes": 1016,
+ "n_pixel_episodes": 50,
+ "n_pixel_frames": 6812,
+ "bytes": 172222520,
+ "array_bytes_uncompressed": {
+  "action": 18693888,
+  "ep_len": 74740,
+  "ep_offset": 149480,
+  "episode_idx": 18693888,
+  "proprio": 37387776,
+  "state": 65428608,
+  "step_idx": 18693888,
+  "excluded_episodes": 8128,
+  "eval_episode_rows": 54496,
+  "eval_pixels": 1025396736,
+  "meta": 2988
+ },
+ "scaler_max_abs_diff": {
+  "action": 0.0,
+  "proprio": 0.0,
+  "state": 0.0
+ },
+ "checks": {
+  "equal_action": true,
+  "equal_ep_len": true,
+  "equal_ep_offset": true,
+  "equal_episode_idx": true,
+  "equal_proprio": true,
+  "equal_state": true,
+  "equal_step_idx": true,
+  "equal_eval_pixels": true,
+  "scaler_action_n_equal": true,
+  "scaler_action_close": true,
+  "scaler_proprio_n_equal": true,
+  "scaler_proprio_close": true,
+  "scaler_state_n_equal": true,
+  "scaler_state_close": true,
+  "resample_ours_rows_equal": true,
+  "resample_upstream_rows_equal": true,
+  "excluded_cover_eval_rows": true
+ },
+ "all_ok": true,
+ "hdf5plugin": true,
+ "elapsed_s": 316.3
+}

@@ -3,7 +3,60 @@
 Newest on top. Format: `## YYYY-MM-DD: <choice>` then context, options considered, why, and
 whether it changes anything promised in the proposal.
 
-## 2026-11-13: Training data for the heads: noisy-expert replay + weak policy, CPU collection and encoding (recommended; awaiting OK)
+## 2026-11-13: Kick ranges: keep "medium" (5-20 px, +-10 deg), chosen from the block-6 spread study
+
+- **Study** (`cvar/envs/spread_study.py`, figures and table in `results/phase0/spread/`): for each of
+  upstream's 50 eval pairs, the expert's own 25 actions from the start state, replayed open-loop with
+  the pair's goal (set as eval sets them), under 32 kick seeds, for three kick sizes x
+  p in {0, 0.05, 0.15}, plus medium with `randomize_physics` on at p in {0, 0.15}. 17,600 rollouts,
+  160 s on one CPU. Success = eval.py's (env `terminated` at any step). CIs bootstrap over the 50
+  pairs. Every number was recomputed by separate code (0 mismatches).
+
+  | kicks (translation, rotation) | p = 0 | p = 0.05 | p = 0.15 | median block error at p = 0.15 |
+  |---|---|---|---|---|
+  | small (2-10 px, +-5 deg) | 1.000 | 0.974 [0.961, 0.986] | 0.904 [0.878, 0.930] | 7.8 px |
+  | **medium (5-20 px, +-10 deg)** | 1.000 | 0.854 [0.825, 0.884] | 0.604 [0.559, 0.644] | 16.8 px |
+  | large (10-40 px, +-20 deg) | 1.000 | 0.621 [0.587, 0.656] | 0.289 [0.253, 0.325] | 37.1 px |
+  | medium + physics on | 0.934 [0.890, 0.973] | - | 0.566 [0.520, 0.613] | 18.1 px |
+
+- **Choice: medium.** At p = 0.15 the median final block error (16.8 px) sits just inside the 20 px
+  success radius, so one plan's outcome distribution straddles success/failure: the regime where a
+  plan's tail (CVaR) can differ from its mean. Small barely moves p = 0.05 (0.97); large makes p = 0.05
+  look like medium p = 0.15 and fails 71% of open-loop plans at p = 0.15.
+- **Caveat, and a gate before data collection.** This is open loop. CEM replans every 5 steps and will
+  undo many kicks, so closed-loop success will drop less. The kick size is baked into the training
+  data, so it must be final before collection. Proposed check: the pretrained deterministic LeWM,
+  closed loop, at p = 0.15 medium vs p = 0. If its success at p = 0.15 is inside the p = 0 CI, the
+  noise is too weak for the planner and we switch to large. This is a GPU eval (CPU is ~24 s per plan
+  call); it can ride on the block-8 smoke job. Rohan decides.
+- **Realized kicks** (the kick-rate metric): fired 0.0488 / 0.1488 at p = 0.05 / 0.15 (within 1.1
+  binomial SE); full-size 0.035 / 0.107 for medium, i.e. 72% of fired kicks land at full size, 13-14%
+  are vetoed (blocked by the agent or a wall at every backoff), the rest are halved. Under the
+  contact-heavy weak policy it was ~0.56 p, so the full-size rate depends on the policy, as expected.
+- **Replay fidelity (validates the noisy-expert-replay data plan).** At p = 0 the replay is identical
+  across seeds and tracks the expert's own recorded states to a median max block deviation of 0.63 px
+  over 25 steps (p90 1.79, max 5.78 px); every replay reaches the goal. So replaying expert actions in
+  our env reproduces the expert data, and kicked replays differ from it only by the kicks.
+- **Physics ranges** (drag 10-50 /s, mass 0.5-2) stay provisional: alone they cost an expert replay
+  ~7 points of open-loop success (median error 3.2 px). Those conditions are on hold anyway (quota).
+- Effect on proposal: none; it fixed no magnitudes.
+
+## 2026-11-13: Training data for the heads: noisy-expert replay + weak policy, CPU collection and encoding
+
+- **Status (Rohan, 2026-11-13):** approved, with three changes. (1) The second transient expert
+  download is approved; keep every non-pixel column plus the excluded-episode list so it is never
+  downloaded again (done: `$STABLEWM_HOME/pusht/expert_columns.npz`, `cvar/data/extract_expert_columns.py`).
+  (2) Build the **3 main-grid conditions first (≈ 1.3 GB)**; the two `randomize_physics` conditions
+  wait until Rohan confirms `~/private` space. (3) The block-8 smoke job also times collect-and-encode
+  in one GPU pass (env on CPU, frames batched to the encoder on the GPU); Rohan picks GPU vs the free
+  CPU path (9.8 h for 3 conditions) from those numbers.
+- **Latent dtype: stored as float16, computed in float32.** The encoder runs in fp32 (no autocast, on
+  CPU or GPU), the result is cast to fp16 once on write, and heads upcast to fp32 on load. fp16 keeps
+  11 significant bits (relative rounding error <= 2^-11 ≈ 4.9e-4, max 65,504), so a latent of size
+  O(1) moves by ~1e-3 at most, which is expected to be far below the predictor's one-step error.
+  The collector checks this per chunk: it logs the max |z - fp32(fp16(z))| and, on a sample, the
+  ratio of the fp16 rounding MSE to the pretrained predictor's one-step MSE. If that ratio is above
+  1e-2 we switch to fp32 (+0.19 GB per condition).
 
 - Needs: per condition (main grid p in {0, 0.05, 0.15}; secondary `randomize_physics` at p in {0, 0.15}),
   trajectories in the stochastic env whose states look like eval states (eval start/goal pairs are
@@ -33,7 +86,7 @@ whether it changes anything promised in the proposal.
 - Expert actions: A/B need the expert action sequences and start states, which the eval npz doesn't
   hold. Getting them takes **one more transient download** into the worker's `/tmp` (13.1 GB, ~8 min,
   same script pattern), keeping every non-pixel column (action, state, proprio, episode/step index:
-  about 0.14 GB raw) in `$STABLEWM_HOME`. **Needs Rohan's OK.**
+  about 0.14 GB raw) in `$STABLEWM_HOME`. Approved (status above).
 - Where: **collect and encode in the free CPU worker**, chunked by 100 episodes (atomic, resumable),
   run through `snapshot_run.sh`. Full frames live only in the worker's `/tmp` until encoded.
   Collection ≈ 0.33 h per condition in one process. CPU encoding ≈ 3.3 h per condition (9.8 h for the
@@ -44,7 +97,7 @@ whether it changes anything promised in the proposal.
   frames, zlib, for a 20% episode subset** (0.21 GB), for the SIGReg encoder fine-tune fallback; we
   keep full resolution instead of low-res because the encoder takes 224 px input and compressed 224 px
   frames cost about as much as raw 64 px ones; states/actions/kick logs (0.04 GB). Main grid ≈ 1.3 GB,
-  all 5 conditions ≈ 2.2 GB. **Depends on the `~/private` quota (unconfirmed).**
+  all 5 conditions ≈ 2.2 GB. Physics conditions held until the `~/private` quota is confirmed.
 - Normalization: the pretrained encoder and action encoder use the expert scaler stats (from the npz),
   so every head uses those too. No stats from our data.
 - Size knob: if a head's validation loss is still falling with data, double to 8,000 episodes per

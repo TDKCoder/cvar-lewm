@@ -1,6 +1,6 @@
 # Stochastic PushT (cvar/envs/stochastic_pusht.py). Definitions and formulas: docs/decisions.md
-# (2026-11-12 entries). Ranges are PROVISIONAL until the block-6 spread study picks them so that
-# an expert-ish open-loop plan visibly diverges at p = 0.15.
+# (2026-11-12 entries). Kick ranges chosen by the block-6 spread study (decision 2026-11-13, "medium";
+# results/phase0/spread/), pending a closed-loop check before data collection. Physics ranges provisional.
 p: 0.0                 # per-step probability of a kick; main sweep p in {0, 0.05, 0.15}
 
 kick:                  # T-block pose kick applied before the env step when u_t < p
