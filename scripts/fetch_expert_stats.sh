@@ -6,6 +6,9 @@
 #   scripts/remote.sh --bg verify-expert "bash scripts/fetch_expert_stats.sh --verify"  # re-check npz
 # --verify leaves the npz alone and runs cvar/data/verify_eval_states.py against the real h5
 # (sklearn scalers, eval.py's literal sampling, stored rows re-read) -> .../verify.json.
+#   scripts/remote.sh --bg expert-columns "bash scripts/fetch_expert_stats.sh --columns"
+# --columns keeps every non-pixel column (+ excluded eval episodes, + pixels of the 50 upstream-eval
+# episodes) in $STABLEWM_HOME/pusht/expert_columns.npz (cvar/data/extract_expert_columns.py).
 # Sizes (2026-11-12): 13,136,247,974 B compressed; zstd frame content size 46,300,921,856 B.
 set -euo pipefail
 # The repo on the cluster is an NFS mirror that remote.sh re-syncs; bash reads scripts lazily, so a
@@ -18,6 +21,7 @@ fi
 _SELF="$CVL_SELF_COPY"; unset CVL_SELF_COPY   # don't leak into children (they get their own copy)
 MODE=extract
 [ "${1:-}" = "--verify" ] && MODE=verify
+[ "${1:-}" = "--columns" ] && MODE=columns
 cd "$CVL_REPO"
 source scripts/env.sh
 
@@ -66,6 +70,15 @@ if [ "$MODE" = verify ]; then
   python3 -m cvar.data.verify_eval_states --h5 "$W/pusht_expert_train.h5" --npz "$OUT" \
     --out "$(dirname "$SUMMARY")/verify.json"
   echo "FETCH_VERIFY_OK"
+  exit 0
+fi
+if [ "$MODE" = columns ]; then
+  echo "== columns $(date -Is)"
+  COLS="$STABLEWM_HOME/pusht/expert_columns.npz"
+  python3 -m cvar.data.extract_expert_columns --h5 "$W/pusht_expert_train.h5" --eval-npz "$OUT" \
+    --out "$COLS" --summary "$RUNS_DIR/phase0-expert-columns/summary.json"
+  ls -l "$COLS"; du -sh "$STABLEWM_HOME"
+  echo "FETCH_COLUMNS_OK"
   exit 0
 fi
 echo "== extract $(date -Is)"

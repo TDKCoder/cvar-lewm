@@ -10,7 +10,7 @@ h5py = pytest.importorskip("h5py")
 pytest.importorskip("sklearn")
 
 
-def make_h5(path, n_eps=40, seed=0):
+def make_h5(path, n_eps=40, seed=0, pixels=False):
     rng = np.random.default_rng(seed)
     lens = rng.integers(20, 120, n_eps)  # some shorter than goal_offset + 1: no valid start
     ep = np.repeat(np.arange(n_eps), lens)
@@ -25,6 +25,8 @@ def make_h5(path, n_eps=40, seed=0):
         f["action"][5] = np.nan  # eval.py drops NaN rows before fitting
         f["proprio"] = rng.normal(3, 2, size=(n, 4)).astype(np.float32)
         f["state"] = rng.normal(100, 50, size=(n, 7)).astype(np.float32)
+        if pixels:
+            f["pixels"] = rng.integers(0, 256, size=(n, 4, 4, 3), dtype=np.uint8)
     return n
 
 
@@ -58,3 +60,24 @@ def test_verify_catches_a_wrong_row(tmp_path):
     r = run("cvar.data.verify_eval_states", "--h5", str(h5), "--npz", str(npz), "--out", str(rep))
     out = json.loads(rep.read_text())
     assert r.returncode == 1 and not out["checks"]["upstream_rows_equal"]
+
+
+def test_expert_columns_keep_everything_but_pixels(tmp_path):
+    h5 = tmp_path / "d.h5"
+    make_h5(h5, pixels=True)
+    npz, summ = tmp_path / "s.npz", tmp_path / "s.json"
+    assert run("cvar.data.extract_eval_states", "--h5", str(h5), "--out", str(npz), "--summary", str(summ),
+               "--n-frames", "0").returncode == 0
+    cols, csum = tmp_path / "c.npz", tmp_path / "c.json"
+    r = run("cvar.data.extract_expert_columns", "--h5", str(h5), "--eval-npz", str(npz), "--out", str(cols),
+            "--summary", str(csum))
+    out = json.loads(csum.read_text())
+    assert r.returncode == 0 and out["all_ok"], r.stderr + json.dumps(out["checks"], indent=1)
+    z, ev = np.load(cols), np.load(npz)
+    with h5py.File(h5) as f:
+        for k in ("action", "proprio", "state", "episode_idx", "step_idx", "ep_len", "ep_offset"):
+            assert np.array_equal(z[k], f[k][:], equal_nan=z[k].dtype.kind == "f"), k
+        assert np.array_equal(z["eval_pixels"], f["pixels"][z["eval_episode_rows"]])
+    assert "pixels" not in z.files
+    assert set(np.unique(np.concatenate([ev["upstream_episode"], ev["ours_episode"]]))) == set(z["excluded_episodes"])
+    assert set(np.unique(z["episode_idx"][z["eval_episode_rows"]])) == set(ev["upstream_episode"])
